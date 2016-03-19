@@ -22,10 +22,13 @@ import com.yahoo.ycsb.ByteIterator;
 import com.yahoo.ycsb.Status;
 import com.yahoo.ycsb.StringByteIterator;
 
+import org.apache.commons.lang.StringEscapeUtils;
+
 import java.sql.*;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.lang.System;
 
 /**
  * A class that wraps a JDBC compliant database to allow it to be interfaced
@@ -304,9 +307,9 @@ public class JdbcDBClient extends DB {
   private PreparedStatement createAndCacheReadStatement(StatementType readType, String key) throws SQLException {
     StringBuilder read = new StringBuilder("SELECT * FROM ");
     read.append(readType.tableName);
-    read.append(" WHERE ");
+    read.append(" WHERE data ->>'");
     read.append(PRIMARY_KEY);
-    read.append(" = ");
+    read.append("' = ");
     read.append("?");
     PreparedStatement readStatement = getShardConnectionByKey(key).prepareStatement(read.toString());
     PreparedStatement stmt = cachedStatements.putIfAbsent(readType, readStatement);
@@ -319,9 +322,9 @@ public class JdbcDBClient extends DB {
   private PreparedStatement createAndCacheDeleteStatement(StatementType deleteType, String key) throws SQLException {
     StringBuilder delete = new StringBuilder("DELETE FROM ");
     delete.append(deleteType.tableName);
-    delete.append(" WHERE ");
+    delete.append(" WHERE data->>'");
     delete.append(PRIMARY_KEY);
-    delete.append(" = ?");
+    delete.append("' = ?");
     PreparedStatement deleteStatement = getShardConnectionByKey(key).prepareStatement(delete.toString());
     PreparedStatement stmt = cachedStatements.putIfAbsent(deleteType, deleteStatement);
     if (stmt == null) {
@@ -356,9 +359,9 @@ public class JdbcDBClient extends DB {
   private PreparedStatement createAndCacheScanStatement(StatementType scanType, String key) throws SQLException {
     StringBuilder select = new StringBuilder("SELECT * FROM ");
     select.append(scanType.tableName);
-    select.append(" WHERE ");
+    select.append(" WHERE data->>'");
     select.append(PRIMARY_KEY);
-    select.append(" >= ?");
+    select.append("' >= ?");
     select.append(" ORDER BY ");
     select.append(PRIMARY_KEY);
     select.append(" LIMIT ?");

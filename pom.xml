@@ -115,7 +115,9 @@ LICENSE file.
     <module>hbase10</module>
     <module>hypertable</module>
     <module>infinispan</module>
-    <module>jdbc</module>
+    <!--<module>jdbc</module>-->
+    <module>pgjsonb</module>
+    <module>mysqljson</module>
     <module>kudu</module>
     <!--<module>mapkeeper</module>-->
     <module>memcached</module>

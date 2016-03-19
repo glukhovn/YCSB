@@ -1,0 +1,6 @@
+recordcount=1000000
+operationcount=1000000
+db.driver=org.postgresql.Driver
+db.url=jdbc:postgresql://52.88.6.217:5432/ycsb
+db.user=test
+db.passwd=123456
