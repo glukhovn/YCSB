@@ -30,6 +30,10 @@ LICENSE file.
   <name>MongoDB Binding</name>
   <packaging>jar</packaging>
 
+  <properties>
+    <checkstyle.failOnViolation>false</checkstyle.failOnViolation>
+  </properties>
+
   <dependencies>
     <dependency>
       <groupId>org.mongodb</groupId>
