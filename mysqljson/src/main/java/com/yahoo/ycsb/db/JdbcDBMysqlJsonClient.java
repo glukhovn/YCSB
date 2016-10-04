@@ -244,7 +244,7 @@ public class JdbcDBMysqlJsonClient extends DB implements JdbcDBClientConstants {
 	throws SQLException {
 	  StringBuilder insert = new StringBuilder("INSERT INTO ");
 	  insert.append(insertType.tableName);
-	  insert.append(" VALUES(?)");
+	  insert.append("(data) VALUES(?)");
     PreparedStatement insertStatement = getShardConnectionByKey(key).prepareStatement(insert.toString());
     PreparedStatement stmt = cachedStatements.putIfAbsent(insertType, insertStatement);
     if (stmt == null) return insertStatement;
