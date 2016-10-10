@@ -111,6 +111,11 @@ public class MongoDbClient extends DB {
   /** The bulk inserts pending for the thread. */
   private final List<Document> bulkInserts = new ArrayList<Document>();
 
+  /**  */
+  private static boolean flat;
+  private static boolean nested;
+  private statis int nestingDepth
+
   /**
    * Cleanup any state for this DB. Called once per DB instance; there is one DB
    * instance per client thread.
@@ -174,6 +179,10 @@ public class MongoDbClient extends DB {
       }
 
       Properties props = getProperties();
+
+      flat = Boolean.parseBoolean(props.getProperty("flat", "true"));
+      nested = Boolean.parseBoolean(props.getProperty("nested", "false"));
+      nestingDepth = Integer.parseInt(props.getProperty("depth", "10"));
 
       // Set insert batchsize, default 1 - to be YCSB-original equivalent
       batchSize = Integer.parseInt(props.getProperty("batchsize", "1"));
@@ -254,7 +263,20 @@ public class MongoDbClient extends DB {
       HashMap<String, ByteIterator> values) {
     try {
       MongoCollection<Document> collection = database.getCollection(table);
-      Document toInsert = new Document("_id", key);
+
+      if (flat) {
+        Document toInsert = new Document("_id", key);
+      }
+
+      if (nested) {
+	    StringBuilder path = new StringBuilder(NESTED_KEY + ".");
+        for (int i = 1; i < nestingDepth; i++) {
+            path.append(String.format("%s%d.", NESTED_KEY, i));
+        }
+
+        Document toInsert = new Document(path, key);
+      }
+
       for (Map.Entry<String, ByteIterator> entry : values.entrySet()) {
         toInsert.put(entry.getKey(), entry.getValue().toArray());
       }
@@ -318,7 +340,18 @@ public class MongoDbClient extends DB {
       HashMap<String, ByteIterator> result) {
     try {
       MongoCollection<Document> collection = database.getCollection(table);
-      Document query = new Document("_id", key);
+      if (flat) {
+        Document query = new Document("_id", key);
+      }
+
+      if (nested) {
+	    StringBuilder path = new StringBuilder(NESTED_KEY + ".");
+        for (int i = 1; i < nestingDepth; i++) {
+            path.append(String.format("%s%d.", NESTED_KEY, i));
+        }
+
+        Document query = new Document(path, key);
+      }
 
       FindIterable<Document> findIterable = collection.find(query);
 
