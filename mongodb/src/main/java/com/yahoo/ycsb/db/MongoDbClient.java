@@ -114,7 +114,8 @@ public class MongoDbClient extends DB {
   /**  */
   private static boolean flat;
   private static boolean nested;
-  private statis int nestingDepth
+  private static int nestingDepth;
+  private static String NESTED_KEY = "yscb_key";
 
   /**
    * Cleanup any state for this DB. Called once per DB instance; there is one DB
@@ -263,18 +264,16 @@ public class MongoDbClient extends DB {
       HashMap<String, ByteIterator> values) {
     try {
       MongoCollection<Document> collection = database.getCollection(table);
-
-      if (flat) {
-        Document toInsert = new Document("_id", key);
-      }
+      Document toInsert;
 
       if (nested) {
-	    StringBuilder path = new StringBuilder(NESTED_KEY + ".");
+        toInsert = new Document("ycsb_key", key);
         for (int i = 1; i < nestingDepth; i++) {
-            path.append(String.format("%s%d.", NESTED_KEY, i));
+          toInsert = new Document("ycsb_key" + i, toInsert);
         }
-
-        Document toInsert = new Document(path, key);
+      }
+      else {
+        toInsert = new Document("_id", key);
       }
 
       for (Map.Entry<String, ByteIterator> entry : values.entrySet()) {
@@ -340,17 +339,16 @@ public class MongoDbClient extends DB {
       HashMap<String, ByteIterator> result) {
     try {
       MongoCollection<Document> collection = database.getCollection(table);
-      if (flat) {
-        Document query = new Document("_id", key);
-      }
+      Document query;
 
       if (nested) {
-	    StringBuilder path = new StringBuilder(NESTED_KEY + ".");
+        query = new Document("ycsb_key", key);
         for (int i = 1; i < nestingDepth; i++) {
-            path.append(String.format("%s%d.", NESTED_KEY, i));
+            query = new Document("ycsb_key" + i, query);
         }
-
-        Document query = new Document(path, key);
+      }
+      else {
+        query = new Document("_id", key);
       }
 
       FindIterable<Document> findIterable = collection.find(query);
