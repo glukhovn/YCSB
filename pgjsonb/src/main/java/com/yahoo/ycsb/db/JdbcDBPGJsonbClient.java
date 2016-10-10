@@ -59,6 +59,9 @@ public class JdbcDBPGJsonbClient extends DB implements JdbcDBClientConstants {
   private ArrayList<Connection> conns;
   private boolean initialized = false;
   private Properties props;
+  private boolean flat;
+  private boolean nested;
+  private int nestingDepth;
   private Integer jdbcFetchSize;
   private static final String DEFAULT_PROP = "";
   private ConcurrentMap<StatementType, PreparedStatement> cachedStatements;
@@ -180,6 +183,9 @@ public class JdbcDBPGJsonbClient extends DB implements JdbcDBClientConstants {
 		String user = props.getProperty(CONNECTION_USER, DEFAULT_PROP);
 		String passwd = props.getProperty(CONNECTION_PASSWD, DEFAULT_PROP);
 		String driver = props.getProperty(DRIVER_CLASS);
+		flat = props.getProperty(FLAT);
+		nested = props.getProperty(FLAT);
+		nestingDepth = props.getProperty("depth", 10);
 
       String jdbcFetchSizeStr = props.getProperty(JDBC_FETCH_SIZE);
           if (jdbcFetchSizeStr != null) {
@@ -313,10 +319,22 @@ public class JdbcDBPGJsonbClient extends DB implements JdbcDBClientConstants {
       }
 
       StringBuilder readCondition = new StringBuilder("{\"");
-      readCondition.append(PRIMARY_KEY);
-      readCondition.append("\": \"");
-      readCondition.append(key);
-      readCondition.append("\"}");
+
+      if (flat) {
+          readCondition.append(PRIMARY_KEY);
+          readCondition.append("\": \"");
+          readCondition.append(key);
+          readCondition.append("\"}");
+      }
+
+      if (nested) {
+        for (int i = 1; i < nestingDepth; i++) {
+            insert_jsonb.append(String.format("\"%s%d\": {", PRIMARY_KEY, i));
+        }
+        insert_jsonb.append(String.format("\"%s\"", key));
+        insert_jsonb.append(new String(new char[10]).replace("\0", "}"));
+      }
+
       readStatement.setString(1, readCondition.toString());
       ResultSet resultSet = readStatement.executeQuery();
       if (!resultSet.next()) {
@@ -419,7 +437,19 @@ public class JdbcDBPGJsonbClient extends DB implements JdbcDBClientConstants {
 	      insertStatement = createAndCacheInsertStatement(type, key);
 	    }
 	  StringBuilder insert_jsonb = new StringBuilder("{");
-      insert_jsonb.append(String.format("\"%s\": \"%s\"", PRIMARY_KEY, key));
+
+      if (flat) {
+        insert_jsonb.append(String.format("\"%s\": \"%s\"", PRIMARY_KEY, key));
+      }
+
+      if (nested) {
+        for (int i = 1; i < nestingDepth; i++) {
+            insert_jsonb.append(String.format("\"%s%d\": {", PRIMARY_KEY, i));
+        }
+        insert_jsonb.append(String.format("\"%s\"", key));
+        insert_jsonb.append(new String(new char[10]).replace("\0", "}"));
+      }
+
       int index = 2;
       for (Map.Entry<String, ByteIterator> entry : values.entrySet()) {
         String field = entry.getValue().toString();
