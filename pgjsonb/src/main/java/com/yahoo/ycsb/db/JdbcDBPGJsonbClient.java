@@ -183,9 +183,9 @@ public class JdbcDBPGJsonbClient extends DB implements JdbcDBClientConstants {
 		String user = props.getProperty(CONNECTION_USER, DEFAULT_PROP);
 		String passwd = props.getProperty(CONNECTION_PASSWD, DEFAULT_PROP);
 		String driver = props.getProperty(DRIVER_CLASS);
-		flat = props.getProperty(FLAT);
-		nested = props.getProperty(FLAT);
-		nestingDepth = props.getProperty("depth", 10);
+		flat = Boolean.parseBoolean(props.getProperty(FLAT, "true"));
+		nested = Boolean.parseBoolean(props.getProperty(NESTED, "false"));
+		nestingDepth = Integer.parseInt(props.getProperty("depth", "10"));
 
       String jdbcFetchSizeStr = props.getProperty(JDBC_FETCH_SIZE);
           if (jdbcFetchSizeStr != null) {
@@ -318,9 +318,10 @@ public class JdbcDBPGJsonbClient extends DB implements JdbcDBClientConstants {
         readStatement = createAndCacheReadStatement(type, key);
       }
 
-      StringBuilder readCondition = new StringBuilder("{\"");
+      StringBuilder readCondition = new StringBuilder("{");
 
       if (flat) {
+          readCondition.append("\"");
           readCondition.append(PRIMARY_KEY);
           readCondition.append("\": \"");
           readCondition.append(key);
@@ -328,14 +329,14 @@ public class JdbcDBPGJsonbClient extends DB implements JdbcDBClientConstants {
       }
 
       if (nested) {
-        for (int i = 1; i < nestingDepth; i++) {
-            insert_jsonb.append(String.format("\"%s%d\": {", PRIMARY_KEY, i));
+        for (int i = 1; i < nestingDepth - 1; i++) {
+            readCondition.append(String.format("\"%s%d\": {", PRIMARY_KEY, i));
         }
-        insert_jsonb.append(String.format("\"%s\"", key));
-        insert_jsonb.append(new String(new char[10]).replace("\0", "}"));
+        readCondition.append(String.format("\"%s\": \"%s\"", PRIMARY_KEY, key));
+        readCondition.append(new String(new char[nestingDepth - 1]).replace("\0", "}"));
       }
-
       readStatement.setString(1, readCondition.toString());
+
       ResultSet resultSet = readStatement.executeQuery();
       if (!resultSet.next()) {
         resultSet.close();
@@ -443,11 +444,11 @@ public class JdbcDBPGJsonbClient extends DB implements JdbcDBClientConstants {
       }
 
       if (nested) {
-        for (int i = 1; i < nestingDepth; i++) {
+        for (int i = 1; i < nestingDepth - 1; i++) {
             insert_jsonb.append(String.format("\"%s%d\": {", PRIMARY_KEY, i));
         }
-        insert_jsonb.append(String.format("\"%s\"", key));
-        insert_jsonb.append(new String(new char[10]).replace("\0", "}"));
+        insert_jsonb.append(String.format("\"%s\" : \"%s\"", PRIMARY_KEY, key));
+        insert_jsonb.append(new String(new char[nestingDepth - 2]).replace("\0", "}"));
       }
 
       int index = 2;
