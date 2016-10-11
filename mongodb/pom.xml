@@ -37,10 +37,6 @@ LICENSE file.
       <version>${mongodb.version}</version>
     </dependency>
     <dependency>
-      <groupId>com.allanbank</groupId>
-      <artifactId>mongodb-async-driver</artifactId>
-      <version>${mongodb.async.version}</version>
-    </dependency>
     <dependency>
       <groupId>com.yahoo.ycsb</groupId>
       <artifactId>core</artifactId>
