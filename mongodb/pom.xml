@@ -37,7 +37,6 @@ LICENSE file.
       <version>${mongodb.version}</version>
     </dependency>
     <dependency>
-    <dependency>
       <groupId>com.yahoo.ycsb</groupId>
       <artifactId>core</artifactId>
       <version>${project.version}</version>
