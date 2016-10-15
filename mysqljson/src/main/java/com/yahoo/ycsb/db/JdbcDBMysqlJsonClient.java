@@ -59,6 +59,9 @@ public class JdbcDBMysqlJsonClient extends DB implements JdbcDBClientConstants {
   private ArrayList<Connection> conns;
   private boolean initialized = false;
   private Properties props;
+  private boolean flat;
+  private boolean nested;
+  private int nestingDepth;
   private Integer jdbcFetchSize;
   private static final String DEFAULT_PROP = "";
   private ConcurrentMap<StatementType, PreparedStatement> cachedStatements;
@@ -180,6 +183,9 @@ public class JdbcDBMysqlJsonClient extends DB implements JdbcDBClientConstants {
 		String user = props.getProperty(CONNECTION_USER, DEFAULT_PROP);
 		String passwd = props.getProperty(CONNECTION_PASSWD, DEFAULT_PROP);
 		String driver = props.getProperty(DRIVER_CLASS);
+		flat = Boolean.parseBoolean(props.getProperty(FLAT, "true"));
+		nested = Boolean.parseBoolean(props.getProperty(NESTED, "false"));
+		nestingDepth = Integer.parseInt(props.getProperty("depth", "10"));
 
       String jdbcFetchSizeStr = props.getProperty(JDBC_FETCH_SIZE);
           if (jdbcFetchSizeStr != null) {
@@ -408,7 +414,19 @@ public class JdbcDBMysqlJsonClient extends DB implements JdbcDBClientConstants {
 	      insertStatement = createAndCacheInsertStatement(type, key);
 	    }
 	  StringBuilder insert_jsonb = new StringBuilder("{");
-      insert_jsonb.append(String.format("\"%s\": \"%s\"", PRIMARY_KEY, key));
+
+      if (flat) {
+          insert_jsonb.append(String.format("\"%s\": \"%s\"", PRIMARY_KEY, key));
+      }
+
+      if (nested) {
+        for (int i = 1; i < nestingDepth - 1; i++) {
+            insert_jsonb.append(String.format("\"%s%d\": {", PRIMARY_KEY, i));
+        }
+        insert_jsonb.append(String.format("\"%s\" : \"%s\"", PRIMARY_KEY, key));
+        insert_jsonb.append(new String(new char[nestingDepth - 2]).replace("\0", "}"));
+      }
+
       int index = 2;
       for (Map.Entry<String, ByteIterator> entry : values.entrySet()) {
         String field = entry.getValue().toString();

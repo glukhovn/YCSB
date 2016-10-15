@@ -57,4 +57,8 @@ public interface JdbcDBClientConstants {
   
   /** The field name prefix in the table.*/
   public static String COLUMN_PREFIX = "FIELD";
+
+  /**  */
+  public static final String FLAT = "flat";
+  public static final String NESTED = "nested";
 }
