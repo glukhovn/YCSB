@@ -24,6 +24,7 @@ import com.yahoo.ycsb.Status;
 import com.yahoo.ycsb.StringByteIterator;
 
 import org.apache.commons.lang.StringEscapeUtils;
+import org.json.JSONObject;
 
 import java.sql.*;
 import java.util.*;
@@ -59,9 +60,14 @@ public class JdbcDBPGJsonbClient extends DB implements JdbcDBClientConstants {
   private ArrayList<Connection> conns;
   private boolean initialized = false;
   private Properties props;
-  private boolean flat;
-  private boolean nested;
-  private int nestingDepth;
+
+  private boolean flat_key;
+  private boolean nested_key;
+  private int nesting_key_depth;
+  private int document_depth;
+  private int document_width;
+  private int element_width;
+
   private Integer jdbcFetchSize;
   private static final String DEFAULT_PROP = "";
   private ConcurrentMap<StatementType, PreparedStatement> cachedStatements;
@@ -183,9 +189,13 @@ public class JdbcDBPGJsonbClient extends DB implements JdbcDBClientConstants {
 		String user = props.getProperty(CONNECTION_USER, DEFAULT_PROP);
 		String passwd = props.getProperty(CONNECTION_PASSWD, DEFAULT_PROP);
 		String driver = props.getProperty(DRIVER_CLASS);
-		flat = Boolean.parseBoolean(props.getProperty(FLAT, "true"));
-		nested = Boolean.parseBoolean(props.getProperty(NESTED, "false"));
-		nestingDepth = Integer.parseInt(props.getProperty("depth", "10"));
+
+		flat_key = Boolean.parseBoolean(props.getProperty(flat_key, "true"));
+		nested_key = Boolean.parseBoolean(props.getProperty(nested_key, "false"));
+		nesting_key_depth = Integer.parseInt(props.getProperty("depth", "10"));
+		document_depth = Integer.parseInt(props.getProperty("document_depth", "10"));
+		document_width = Integer.parseInt(props.getProperty("document_width", "10"));
+		element_width = Integer.parseInt(props.getProperty("element_width", "10"));
 
       String jdbcFetchSizeStr = props.getProperty(JDBC_FETCH_SIZE);
           if (jdbcFetchSizeStr != null) {
@@ -320,7 +330,7 @@ public class JdbcDBPGJsonbClient extends DB implements JdbcDBClientConstants {
 
       StringBuilder readCondition = new StringBuilder("{");
 
-      if (flat) {
+      if (flat_key) {
           readCondition.append("\"");
           readCondition.append(PRIMARY_KEY);
           readCondition.append("\": \"");
@@ -328,12 +338,12 @@ public class JdbcDBPGJsonbClient extends DB implements JdbcDBClientConstants {
           readCondition.append("\"}");
       }
 
-      if (nested) {
-        for (int i = 1; i < nestingDepth - 1; i++) {
+      if (nested_key) {
+        for (int i = 1; i < nesting_key_depth - 1; i++) {
             readCondition.append(String.format("\"%s%d\": {", PRIMARY_KEY, i));
         }
         readCondition.append(String.format("\"%s\": \"%s\"", PRIMARY_KEY, key));
-        readCondition.append(new String(new char[nestingDepth - 1]).replace("\0", "}"));
+        readCondition.append(new String(new char[nesting_key_depth - 1]).replace("\0", "}"));
       }
       readStatement.setString(1, readCondition.toString());
 
@@ -439,23 +449,63 @@ public class JdbcDBPGJsonbClient extends DB implements JdbcDBClientConstants {
 	    }
 	  StringBuilder insert_jsonb = new StringBuilder("{");
 
-      if (flat) {
+      if (flat_key) {
         insert_jsonb.append(String.format("\"%s\": \"%s\"", PRIMARY_KEY, key));
       }
 
-      if (nested) {
-        for (int i = 1; i < nestingDepth - 1; i++) {
+      if (nested_key) {
+        for (int i = 1; i < nesting_key_depth - 1; i++) {
             insert_jsonb.append(String.format("\"%s%d\": {", PRIMARY_KEY, i));
         }
         insert_jsonb.append(String.format("\"%s\" : \"%s\"", PRIMARY_KEY, key));
-        insert_jsonb.append(new String(new char[nestingDepth - 2]).replace("\0", "}"));
+        insert_jsonb.append(new String(new char[nesting_key_depth - 2]).replace("\0", "}"));
       }
 
-      int index = 2;
-      for (Map.Entry<String, ByteIterator> entry : values.entrySet()) {
-        String field = entry.getValue().toString();
-        insert_jsonb.append(String.format(", \"%s%d\": \"%s\"", COLUMN_PREFIX, index++, StringEscapeUtils.escapeJava(field)));
+      int depth = 0;
+      ArrayList<JSONObject> obj_keys = new ArrayList<JSONObject>();
+      ArrayList<JSONObject> top_keys = obj_keys;
+      ArrayList<JSONObject> current_keys;
+      LinkedList<ByteIterator> val_list = new LinkedList<ByteIterator>(values.values());
+      for(int i = 0; i < 4; i++) {
+        obj_keys.add(new JSONObject());
       }
+
+      while (depth < 3) {
+        current_keys = new ArrayList<JSONObject>();
+        for(JSONObject obj : obj_keys) {
+
+          // put values
+          for(int i = 0; i < 2; i++) {
+            obj.put(String.format("%s%d", COLUMN_PREFIX, index), val_list.pop());
+            index++;
+          }
+
+          if (depth < 2) {
+            // put objects
+            for(int i = 0; i < 2; i++) {
+              JSONObject child = new JSONObject();
+              obj.put(String.format("%s%d", COLUMN_PREFIX, index), child);
+              current_keys.add(child);
+              index++;
+            }
+          }
+          else {
+            // put values
+            for(int i = 0; i < 2; i++) {
+              obj.put(String.format("%s%d", COLUMN_PREFIX, index), val_list.pop());
+              index++;
+            }
+          }
+        }
+
+        obj_keys = current_keys;
+        depth++;
+      }
+
+      for(JSONObject obj : top_keys) {
+        insert_jsonb.append(String.format(", \"%s%d\": %s", COLUMN_PREFIX, index++, obj.toString()));
+      }
+
       insert_jsonb.append("}");
       insertStatement.setString(1, insert_jsonb.toString());
       int result = insertStatement.executeUpdate();
