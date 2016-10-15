@@ -342,10 +342,13 @@ public class MongoDbClient extends DB {
       Document query;
 
       if (nested) {
-        query = new Document("ycsb_key", key);
-        for (int i = 1; i < nestingDepth; i++) {
-            query = new Document("ycsb_key" + i, query);
+        StringBuilder path = new StringBuilder("");
+        for (int i = nestingDepth; i > 0; i++) {
+            path.append(String.format("ycsb_key%d.", i));
         }
+        path.append("ycsb_key")
+
+        query = new Document(path.toString(), key);
       }
       else {
         query = new Document("_id", key);
