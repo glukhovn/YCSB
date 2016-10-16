@@ -273,7 +273,27 @@ public class JdbcDBPGJsonbClient extends DB implements JdbcDBClientConstants {
 	throws SQLException {
     StringBuilder read = new StringBuilder("SELECT data FROM ");
     read.append(readType.tableName);
-    read.append(" WHERE data @> ?::jsonb");
+
+    if (jsonb_path_ops) {
+      read.append(" WHERE data @> ?::jsonb");
+    }
+
+    if (field_index && flat_key) {
+      read.append(" WHERE data->>\"");
+      read.append(PRIMARY_KEY);
+      read.append("\" = ?");
+    }
+
+    if (field_index && nested_key) {
+      read.append(" WHERE data->>\"");
+      for (int i = 1; i < nesting_key_depth - 1; i++) {
+        read.append("\"" + PRIMARY_KEY + i + "\"->>");
+      }
+      read.append("\"" + PRIMARY_KEY + "\"");
+      read.append(" = ?");
+    }
+
+
     PreparedStatement readStatement = getShardConnectionByKey(key).prepareStatement(read.toString());
     PreparedStatement stmt = cachedStatements.putIfAbsent(readType, readStatement);
     if (stmt == null) return readStatement;
