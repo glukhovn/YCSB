@@ -66,7 +66,8 @@ public class JdbcDBPGJsonbClient extends DB implements JdbcDBClientConstants {
   private int nesting_key_depth;
   private int document_depth;
   private int document_width;
-  private int element_width;
+  private int element_values;
+  private int element_obj;
 
   private Integer jdbcFetchSize;
   private static final String DEFAULT_PROP = "";
@@ -190,12 +191,13 @@ public class JdbcDBPGJsonbClient extends DB implements JdbcDBClientConstants {
 		String passwd = props.getProperty(CONNECTION_PASSWD, DEFAULT_PROP);
 		String driver = props.getProperty(DRIVER_CLASS);
 
-		flat_key = Boolean.parseBoolean(props.getProperty(flat_key, "true"));
-		nested_key = Boolean.parseBoolean(props.getProperty(nested_key, "false"));
+		flat_key = Boolean.parseBoolean(props.getProperty(FLAT_KEY, "true"));
+		nested_key = Boolean.parseBoolean(props.getProperty(NESTED_KEY, "false"));
 		nesting_key_depth = Integer.parseInt(props.getProperty("depth", "10"));
-		document_depth = Integer.parseInt(props.getProperty("document_depth", "10"));
-		document_width = Integer.parseInt(props.getProperty("document_width", "10"));
-		element_width = Integer.parseInt(props.getProperty("element_width", "10"));
+ 		document_depth = Integer.parseInt(props.getProperty("document_depth", "3"));
+ 		document_width = Integer.parseInt(props.getProperty("document_width", "4"));
+ 		element_values = Integer.parseInt(props.getProperty("element_values", "2"));
+ 		element_obj = Integer.parseInt(props.getProperty("element_obj", "2"));
 
       String jdbcFetchSizeStr = props.getProperty(JDBC_FETCH_SIZE);
           if (jdbcFetchSizeStr != null) {
@@ -462,49 +464,58 @@ public class JdbcDBPGJsonbClient extends DB implements JdbcDBClientConstants {
       }
 
       int depth = 0;
-      ArrayList<JSONObject> obj_keys = new ArrayList<JSONObject>();
-      ArrayList<JSONObject> top_keys = obj_keys;
-      ArrayList<JSONObject> current_keys;
-      LinkedList<ByteIterator> val_list = new LinkedList<ByteIterator>(values.values());
-      for(int i = 0; i < 4; i++) {
-        obj_keys.add(new JSONObject());
+      int index = 2;
+
+      if (document_depth == 0) {
+        for (Map.Entry<String, ByteIterator> entry : values.entrySet()) {
+          String field = entry.getValue().toString();
+          insert_jsonb.append(String.format(", \"%s%d\": \"%s\"", COLUMN_PREFIX, index++, StringEscapeUtils.escapeJava(field)));
+        }
       }
+      else {
+        ArrayList<JSONObject> obj_keys = new ArrayList<JSONObject>();
+        ArrayList<JSONObject> top_keys = obj_keys;
+        ArrayList<JSONObject> current_keys;
+        LinkedList<ByteIterator> val_list = new LinkedList<ByteIterator>(values.values());
+        for(int i = 0; i < document_width; i++) {
+          obj_keys.add(new JSONObject());
+        }
 
-      while (depth < 3) {
-        current_keys = new ArrayList<JSONObject>();
-        for(JSONObject obj : obj_keys) {
+        while (depth < document_depth) {
+          current_keys = new ArrayList<JSONObject>();
+          for(JSONObject obj : obj_keys) {
 
-          // put values
-          for(int i = 0; i < 2; i++) {
-            obj.put(String.format("%s%d", COLUMN_PREFIX, index), val_list.pop());
-            index++;
-          }
-
-          if (depth < 2) {
-            // put objects
-            for(int i = 0; i < 2; i++) {
-              JSONObject child = new JSONObject();
-              obj.put(String.format("%s%d", COLUMN_PREFIX, index), child);
-              current_keys.add(child);
-              index++;
-            }
-          }
-          else {
             // put values
-            for(int i = 0; i < 2; i++) {
+            for(int i = 0; i < element_values; i++) {
               obj.put(String.format("%s%d", COLUMN_PREFIX, index), val_list.pop());
               index++;
             }
+
+            if (depth < document_depth - 1) {
+              // put objects
+              for(int i = 0; i < element_obj; i++) {
+                JSONObject child = new JSONObject();
+                obj.put(String.format("%s%d", COLUMN_PREFIX, index), child);
+                current_keys.add(child);
+                index++;
+              }
+            }
+            else {
+              // put values
+              for(int i = 0; i < element_obj; i++) {
+                obj.put(String.format("%s%d", COLUMN_PREFIX, index), val_list.pop());
+                index++;
+              }
+            }
           }
+
+          obj_keys = current_keys;
+          depth++;
         }
 
-        obj_keys = current_keys;
-        depth++;
-      }
-
-      for(JSONObject obj : top_keys) {
-        insert_jsonb.append(String.format(", \"%s%d\": %s", COLUMN_PREFIX, index++, obj.toString()));
-      }
+        for(JSONObject obj : top_keys) {
+          insert_jsonb.append(String.format(", \"%s%d\": %s", COLUMN_PREFIX, index++, obj.toString()));
+        }
 
       insert_jsonb.append("}");
       insertStatement.setString(1, insert_jsonb.toString());
