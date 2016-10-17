@@ -24,6 +24,7 @@ import com.yahoo.ycsb.Status;
 import com.yahoo.ycsb.StringByteIterator;
 
 import org.apache.commons.lang.StringEscapeUtils;
+import org.json.JSONObject;
 
 import java.sql.*;
 import java.util.*;
@@ -62,6 +63,11 @@ public class JdbcDBMysqlJsonClient extends DB implements JdbcDBClientConstants {
   private boolean flat;
   private boolean nested;
   private int nestingDepth;
+  private int document_depth;
+  private int document_width;
+  private int element_values;
+  private int element_obj;
+
   private Integer jdbcFetchSize;
   private static final String DEFAULT_PROP = "";
   private ConcurrentMap<StatementType, PreparedStatement> cachedStatements;
@@ -186,6 +192,10 @@ public class JdbcDBMysqlJsonClient extends DB implements JdbcDBClientConstants {
 		flat = Boolean.parseBoolean(props.getProperty(FLAT, "true"));
 		nested = Boolean.parseBoolean(props.getProperty(NESTED, "false"));
 		nestingDepth = Integer.parseInt(props.getProperty("depth", "10"));
+ 		document_depth = Integer.parseInt(props.getProperty("document_depth", "3"));
+ 		document_width = Integer.parseInt(props.getProperty("document_width", "4"));
+ 		element_values = Integer.parseInt(props.getProperty("element_values", "2"));
+ 		element_obj = Integer.parseInt(props.getProperty("element_obj", "2"));
 
       String jdbcFetchSizeStr = props.getProperty(JDBC_FETCH_SIZE);
           if (jdbcFetchSizeStr != null) {
@@ -427,11 +437,61 @@ public class JdbcDBMysqlJsonClient extends DB implements JdbcDBClientConstants {
         insert_jsonb.append(new String(new char[nestingDepth - 2]).replace("\0", "}"));
       }
 
+      int depth = 0;
       int index = 2;
-      for (Map.Entry<String, ByteIterator> entry : values.entrySet()) {
-        String field = entry.getValue().toString();
-        insert_jsonb.append(String.format(", \"%s%d\": \"%s\"", COLUMN_PREFIX, index++, StringEscapeUtils.escapeJava(field)));
+
+      if (document_depth == 0) {
+        for (Map.Entry<String, ByteIterator> entry : values.entrySet()) {
+          String field = entry.getValue().toString();
+          insert_jsonb.append(String.format(", \"%s%d\": \"%s\"", COLUMN_PREFIX, index++, StringEscapeUtils.escapeJava(field)));
+        }
       }
+      else {
+        ArrayList<JSONObject> obj_keys = new ArrayList<JSONObject>();
+        ArrayList<JSONObject> top_keys = obj_keys;
+        ArrayList<JSONObject> current_keys;
+        LinkedList<ByteIterator> val_list = new LinkedList<ByteIterator>(values.values());
+        for(int i = 0; i < document_width; i++) {
+          obj_keys.add(new JSONObject());
+        }
+
+        while (depth < document_depth) {
+          current_keys = new ArrayList<JSONObject>();
+          for(JSONObject obj : obj_keys) {
+
+            // put values
+            for(int i = 0; i < element_values; i++) {
+              obj.put(String.format("%s%d", COLUMN_PREFIX, index), val_list.pop());
+              index++;
+            }
+
+            if (depth < document_depth - 1) {
+              // put objects
+              for(int i = 0; i < element_obj; i++) {
+                JSONObject child = new JSONObject();
+                obj.put(String.format("%s%d", COLUMN_PREFIX, index), child);
+                current_keys.add(child);
+                index++;
+              }
+            }
+            else {
+              // put values
+              for(int i = 0; i < element_obj; i++) {
+                obj.put(String.format("%s%d", COLUMN_PREFIX, index), val_list.pop());
+                index++;
+              }
+            }
+          }
+
+          obj_keys = current_keys;
+          depth++;
+        }
+
+        for(JSONObject obj : top_keys) {
+          insert_jsonb.append(String.format(", \"%s%d\": %s", COLUMN_PREFIX, index++, obj.toString()));
+        }
+      }
+
       insert_jsonb.append("}");
       insertStatement.setString(1, insert_jsonb.toString());
       int result = insertStatement.executeUpdate();
