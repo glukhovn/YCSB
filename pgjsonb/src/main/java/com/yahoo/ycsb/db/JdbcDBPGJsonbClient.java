@@ -536,6 +536,7 @@ public class JdbcDBPGJsonbClient extends DB implements JdbcDBClientConstants {
         for(JSONObject obj : top_keys) {
           insert_jsonb.append(String.format(", \"%s%d\": %s", COLUMN_PREFIX, index++, obj.toString()));
         }
+      }
 
       insert_jsonb.append("}");
       insertStatement.setString(1, insert_jsonb.toString());

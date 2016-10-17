@@ -116,6 +116,11 @@ public class MongoDbClient extends DB {
   private static boolean nested;
   private static int nestingDepth;
   private static String NESTED_KEY = "yscb_key";
+  private static boolean COLUMN_PREFIX = "field"
+  private int document_depth;
+  private int document_width;
+  private int element_values;
+  private int element_obj;
 
   /**
    * Cleanup any state for this DB. Called once per DB instance; there is one DB
@@ -184,6 +189,10 @@ public class MongoDbClient extends DB {
       flat = Boolean.parseBoolean(props.getProperty("flat", "true"));
       nested = Boolean.parseBoolean(props.getProperty("nested", "false"));
       nestingDepth = Integer.parseInt(props.getProperty("depth", "10"));
+      document_depth = Integer.parseInt(props.getProperty("document_depth", "3"));
+      document_width = Integer.parseInt(props.getProperty("document_width", "4"));
+      element_values = Integer.parseInt(props.getProperty("element_values", "2"));
+      element_obj = Integer.parseInt(props.getProperty("element_obj", "2"));
 
       // Set insert batchsize, default 1 - to be YCSB-original equivalent
       batchSize = Integer.parseInt(props.getProperty("batchsize", "1"));
@@ -276,8 +285,55 @@ public class MongoDbClient extends DB {
         toInsert = new Document("_id", key);
       }
 
-      for (Map.Entry<String, ByteIterator> entry : values.entrySet()) {
-        toInsert.put(entry.getKey(), entry.getValue().toArray());
+      if (document_depth == 0) {
+        for (Map.Entry<String, ByteIterator> entry : values.entrySet()) {
+          toInsert.put(entry.getKey(), entry.getValue().toArray());
+        }
+      }
+      else {
+        ArrayList<Document> obj_keys = new ArrayList<Document>();
+        ArrayList<Document> top_keys = obj_keys;
+        ArrayList<Document> current_keys;
+        LinkedList<ByteIterator> val_list = new LinkedList<ByteIterator>(values.values());
+        for(int i = 0; i < document_width; i++) {
+          obj_keys.add(new Document());
+        }
+
+        while (depth < document_depth) {
+          current_keys = new ArrayList<Document>();
+          for(Document obj : obj_keys) {
+
+            // put values
+            for(int i = 0; i < element_values; i++) {
+              obj.put(String.format("%s%d", COLUMN_PREFIX, index), val_list.pop());
+              index++;
+            }
+
+            if (depth < document_depth - 1) {
+              // put objects
+              for(int i = 0; i < element_obj; i++) {
+                Document child = new Document();
+                obj.put(String.format("%s%d", COLUMN_PREFIX, index), child);
+                current_keys.add(child);
+                index++;
+              }
+            }
+            else {
+              // put values
+              for(int i = 0; i < element_obj; i++) {
+                obj.put(String.format("%s%d", COLUMN_PREFIX, index), val_list.pop());
+                index++;
+              }
+            }
+          }
+
+          obj_keys = current_keys;
+          depth++;
+        }
+
+        for(Document obj : top_keys) {
+          toInsert.put(String.format("%s%d", COLUMN_PREFIX, index++, obj.toString()));
+        }
       }
 
       if (batchSize == 1) {
