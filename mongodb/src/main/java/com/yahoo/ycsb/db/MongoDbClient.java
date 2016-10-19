@@ -117,7 +117,7 @@ public class MongoDbClient extends DB {
   private static boolean nested;
   private static int nestingDepth;
   private static String NESTED_KEY = "yscb_key";
-  private static boolean COLUMN_PREFIX = "field";
+  private static String COLUMN_PREFIX = "field";
   private int document_depth;
   private int document_width;
   private int element_values;
