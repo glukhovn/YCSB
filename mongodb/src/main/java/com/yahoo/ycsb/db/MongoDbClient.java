@@ -46,6 +46,7 @@ import com.yahoo.ycsb.Status;
 import org.bson.Document;
 import org.bson.types.Binary;
 
+import java.util.LinkedList;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -116,7 +117,7 @@ public class MongoDbClient extends DB {
   private static boolean nested;
   private static int nestingDepth;
   private static String NESTED_KEY = "yscb_key";
-  private static boolean COLUMN_PREFIX = "field"
+  private static boolean COLUMN_PREFIX = "field";
   private int document_depth;
   private int document_width;
   private int element_values;
@@ -285,6 +286,9 @@ public class MongoDbClient extends DB {
         toInsert = new Document("_id", key);
       }
 
+      int depth = 0;
+      int index = 2;
+
       if (document_depth == 0) {
         for (Map.Entry<String, ByteIterator> entry : values.entrySet()) {
           toInsert.put(entry.getKey(), entry.getValue().toArray());
@@ -332,7 +336,7 @@ public class MongoDbClient extends DB {
         }
 
         for(Document obj : top_keys) {
-          toInsert.put(String.format("%s%d", COLUMN_PREFIX, index++, obj.toString()));
+          toInsert.put(String.format("%s%d", COLUMN_PREFIX, index++), obj);
         }
       }
 
@@ -402,7 +406,7 @@ public class MongoDbClient extends DB {
         for (int i = nestingDepth; i > 0; i++) {
             path.append(String.format("ycsb_key%d.", i));
         }
-        path.append("ycsb_key")
+        path.append("ycsb_key");
 
         query = new Document(path.toString(), key);
       }
