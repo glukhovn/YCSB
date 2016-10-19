@@ -352,22 +352,29 @@ public class JdbcDBPGJsonbClient extends DB implements JdbcDBClientConstants {
 
       StringBuilder readCondition = new StringBuilder("{");
 
-      if (flat_key) {
+      if (flat_key && !field_index) {
           readCondition.append("\"");
           readCondition.append(PRIMARY_KEY);
           readCondition.append("\": \"");
           readCondition.append(key);
           readCondition.append("\"}");
+
+          readStatement.setString(1, readCondition.toString());
       }
 
-      if (nested_key) {
+      if (nested_key && !field_index) {
         for (int i = 1; i < nesting_key_depth - 1; i++) {
             readCondition.append(String.format("\"%s%d\": {", PRIMARY_KEY, i));
         }
         readCondition.append(String.format("\"%s\": \"%s\"", PRIMARY_KEY, key));
         readCondition.append(new String(new char[nesting_key_depth - 1]).replace("\0", "}"));
+
+        readStatement.setString(1, readCondition.toString());
       }
-      readStatement.setString(1, readCondition.toString());
+
+      if (field_index) {
+        readStatement.setString(1, key);
+      }
 
       ResultSet resultSet = readStatement.executeQuery();
       if (!resultSet.next()) {
