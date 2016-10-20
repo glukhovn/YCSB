@@ -283,17 +283,17 @@ public class JdbcDBPGJsonbClient extends DB implements JdbcDBClientConstants {
     }
 
     if (field_index && flat_key) {
-      read.append(" WHERE data->>\"");
+      read.append(" WHERE data->>'");
       read.append(PRIMARY_KEY);
-      read.append("\" = ?");
+      read.append("' = ?");
     }
 
     if (field_index && nested_key) {
-      read.append(" WHERE data->>\"");
+      read.append(" WHERE data->>\");
       for (int i = 1; i < nesting_key_depth - 1; i++) {
-        read.append("\"" + PRIMARY_KEY + i + "\"->>");
+        read.append("'" + PRIMARY_KEY + i + "'->>");
       }
-      read.append("\"" + PRIMARY_KEY + "\"");
+      read.append("'" + PRIMARY_KEY + "'");
       read.append(" = ?");
     }
 
