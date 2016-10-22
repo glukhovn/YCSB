@@ -320,7 +320,26 @@ public class JdbcDBPGJsonbClient extends DB implements JdbcDBClientConstants {
     StringBuilder update = new StringBuilder("UPDATE ");
     update.append(updateType.tableName);
     update.append(" SET data = data || ?::jsonb");
-    update.append(" WHERE data @> ?::jsonb");
+
+    if (jsonb_path_ops) {
+      update.append(" WHERE data @> ?::jsonb");
+    }
+
+    if (field_index && flat_key) {
+      update.append(" WHERE data->>'");
+      update.append(PRIMARY_KEY);
+      update.append("' = ?");
+    }
+
+    if (field_index && nested_key) {
+      update.append(" WHERE data->>'");
+      for (int i = 1; i < nesting_key_depth - 1; i++) {
+        update.append("'" + PRIMARY_KEY + i + "'->>");
+      }
+      update.append("'" + PRIMARY_KEY + "'");
+      update.append(" = ?");
+    }
+
     PreparedStatement insertStatement = getShardConnectionByKey(key).prepareStatement(update.toString());
     PreparedStatement stmt = cachedStatements.putIfAbsent(updateType, insertStatement);
     if (stmt == null) return insertStatement;
