@@ -269,7 +269,7 @@ public class JdbcDBMysqlJsonClient extends DB implements JdbcDBClientConstants {
 	
 	private PreparedStatement createAndCacheReadStatement(StatementType readType, String key)
 	throws SQLException {
-    StringBuilder read = new StringBuilder("SELECT * FROM ");
+    StringBuilder read = new StringBuilder("SELECT data FROM ");
     read.append(readType.tableName);
     read.append(" WHERE ");
     read.append(PRIMARY_KEY);
