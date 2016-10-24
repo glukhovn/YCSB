@@ -473,11 +473,19 @@ public class JdbcDBPGJsonbClient extends DB implements JdbcDBClientConstants {
       }
       update_jsonb.append("}");
 
-      StringBuilder updateCondition = new StringBuilder("{\"");
-      updateCondition.append(PRIMARY_KEY);
-      updateCondition.append("\": \"");
-      updateCondition.append(key);
-      updateCondition.append("\"}");
+      StringBuilder updateCondition = new StringBuilder();
+
+      if (jsonb_path_ops) {
+        updateCondition.append("{\"}");
+        updateCondition.append(PRIMARY_KEY);
+        updateCondition.append("\": \"");
+        updateCondition.append(key);
+        updateCondition.append("\"}");
+      }
+
+      if (field_index) {
+        updateCondition.append(key);
+      }
 
       updateStatement.setString(1, update_jsonb.toString());
       updateStatement.setString(2, updateCondition.toString());
