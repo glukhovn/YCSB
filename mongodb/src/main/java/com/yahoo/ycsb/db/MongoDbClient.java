@@ -416,11 +416,16 @@ public class MongoDbClient extends DB {
 
       FindIterable<Document> findIterable = collection.find(query);
 
-      if (fields != null) {
+      if (fields != null && select_all_fields) {
         Document projection = new Document();
         for (String field : fields) {
           projection.put(field, INCLUDE);
         }
+        findIterable.projection(projection);
+      }
+
+      if (fields != null && select_one_field) {
+        projection.put(select_field_path, INCLUDE);
         findIterable.projection(projection);
       }
 
@@ -528,9 +533,16 @@ public class MongoDbClient extends DB {
 
       Document query = new Document("_id", key);
       Document fieldsToSet = new Document();
-      for (Map.Entry<String, ByteIterator> entry : values.entrySet()) {
-        fieldsToSet.put(entry.getKey(), entry.getValue().toArray());
+      if (update_all_fields) {
+        for (Map.Entry<String, ByteIterator> entry : values.entrySet()) {
+          fieldsToSet.put(entry.getKey(), entry.getValue().toArray());
+        }
       }
+
+      if (update_one_field) {
+        fieldsToSet.put(update_field, values.values()[0].toArray());
+      }
+
       Document update = new Document("$set", fieldsToSet);
 
       UpdateResult result = collection.updateOne(query, update);

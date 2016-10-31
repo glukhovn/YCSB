@@ -269,7 +269,20 @@ public class JdbcDBMysqlJsonClient extends DB implements JdbcDBClientConstants {
 	
 	private PreparedStatement createAndCacheReadStatement(StatementType readType, String key)
 	throws SQLException {
-    StringBuilder read = new StringBuilder("SELECT data FROM ");
+    StringBuilder read = new StringBuilder()
+
+    if (select_all_fields) {
+      read.append("SELECT data FROM ");
+      read.append(readType.tableName);
+    }
+
+    if (select_one_field) {
+      read.append("SELECT json_extract(data, ");
+      read.append(select_field_path);
+      read.append(") FROM ");
+      read.append(readType.tableName);
+    }
+
     read.append(readType.tableName);
     read.append(" WHERE ");
     read.append(PRIMARY_KEY);
@@ -299,13 +312,22 @@ public class JdbcDBMysqlJsonClient extends DB implements JdbcDBClientConstants {
     StringBuilder update = new StringBuilder("UPDATE ");
     update.append(updateType.tableName);
     update.append(" SET data = json_set(data");
-    for (int i = 0; i < updateType.numFields; i++) {
-      update.append(", '$.");
-      update.append(COLUMN_PREFIX);
-      update.append(i+2);
-      update.append("', ");
-      update.append("?");
+
+    if (update_all_fields) {
+      for (int i = 0; i < updateType.numFields; i++) {
+        update.append(", '$.");
+        update.append(COLUMN_PREFIX);
+        update.append(i+2);
+        update.append("', ");
+        update.append("?");
+      }
     }
+
+    if (update_one_field) {
+      update.append(update_field);
+      update.append(", ?")
+    }
+
     update.append(") WHERE ");
     update.append(PRIMARY_KEY);
     update.append(" = ?");
@@ -400,10 +422,18 @@ public class JdbcDBMysqlJsonClient extends DB implements JdbcDBClientConstants {
       if (updateStatement == null) {
         updateStatement = createAndCacheUpdateStatement(type, key);
       }
-      int index = 1;
-      for (Map.Entry<String, ByteIterator> entry : values.entrySet()) {
-        updateStatement.setString(index++, entry.getValue().toString());
+
+      if (update_all_fields) {
+        int index = 1;
+        for (Map.Entry<String, ByteIterator> entry : values.entrySet()) {
+          updateStatement.setString(index++, entry.getValue().toString());
+        }
       }
+
+      if (update_one_field) {
+        updateStatement.setString(index++, values.values()[0].toString());
+      }
+
       updateStatement.setString(index, String.format("\"%s\"", key));
       int result = updateStatement.executeUpdate();
       if (result == 1 || result == 2) return Status.OK;
