@@ -275,8 +275,19 @@ public class JdbcDBPGJsonbClient extends DB implements JdbcDBClientConstants {
 	
 	private PreparedStatement createAndCacheReadStatement(StatementType readType, String key)
 	throws SQLException {
-    StringBuilder read = new StringBuilder("SELECT data FROM ");
-    read.append(readType.tableName);
+    StringBuilder read = new StringBuilder()
+
+    if (select_all_fields) {
+      read.append("SELECT data FROM ");
+      read.append(readType.tableName);
+    }
+
+    if (select_one_field) {
+      read.append("SELECT data->>");
+      read.append(select_field_path);
+      read.append("FROM ");
+      read.append(readType.tableName);
+    }
 
     if (jsonb_path_ops) {
       read.append(" WHERE data @> ?::jsonb");
@@ -458,20 +469,29 @@ public class JdbcDBPGJsonbClient extends DB implements JdbcDBClientConstants {
         updateStatement = createAndCacheUpdateStatement(type, key);
       }
 	  StringBuilder update_jsonb = new StringBuilder("{");
-      int index = 1;
-      for (Map.Entry<String, ByteIterator> entry : values.entrySet()) {
-        if (index > 1)
-        {
-            update_jsonb.append(", ");
+      if (update_all_fields) }
+        int index = 1;
+        for (Map.Entry<String, ByteIterator> entry : values.entrySet()) {
+          if (index > 1)
+          {
+              update_jsonb.append(", ");
+          }
+          update_jsonb.append("\"");
+          update_jsonb.append(COLUMN_PREFIX);
+          update_jsonb.append(index++);
+          update_jsonb.append("\": \"");
+          update_jsonb.append(StringEscapeUtils.escapeJava(entry.getValue().toString()));
+          update_jsonb.append("\"");
         }
-        update_jsonb.append("\"");
-        update_jsonb.append(COLUMN_PREFIX);
-        update_jsonb.append(index++);
-        update_jsonb.append("\": \"");
+        update_jsonb.append("}");
+      }
+
+      if (update_one_field) {
+        update_jsonb.append(update_field);
+        update_jsonb.append(": \"");
         update_jsonb.append(StringEscapeUtils.escapeJava(entry.getValue().toString()));
         update_jsonb.append("\"");
       }
-      update_jsonb.append("}");
 
       StringBuilder updateCondition = new StringBuilder();
 
