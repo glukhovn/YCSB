@@ -118,6 +118,15 @@ public class MongoDbClient extends DB {
   private static int nestingDepth;
   private static String NESTED_KEY = "yscb_key";
   private static String COLUMN_PREFIX = "field";
+
+  private boolean select_all_fields;
+  private boolean select_one_field;
+  private String select_field_path;
+
+  private boolean update_one_field;
+  private boolean update_all_fields;
+  private String update_field;
+
   private int document_depth;
   private int document_width;
   private int element_values;
@@ -190,6 +199,15 @@ public class MongoDbClient extends DB {
       flat = Boolean.parseBoolean(props.getProperty("flat", "true"));
       nested = Boolean.parseBoolean(props.getProperty("nested", "false"));
       nestingDepth = Integer.parseInt(props.getProperty("depth", "10"));
+
+	  select_all_fields = Boolean.parseBoolean(props.getProperty("select_all_fields", "true"));
+	  select_one_field = Boolean.parseBoolean(props.getProperty("select_one_field", "false"));
+	  select_field_path = Boolean.parseBoolean(props.getProperty("select_field_path", ""));
+
+	  update_all_fields = Boolean.parseBoolean(props.getProperty("update_all_fields", "true"));
+	  update_one_field = Boolean.parseBoolean(props.getProperty("update_one_field", "false"));
+	  select_field_path = Boolean.parseBoolean(props.getProperty("update_field", ""));
+
       document_depth = Integer.parseInt(props.getProperty("document_depth", "3"));
       document_width = Integer.parseInt(props.getProperty("document_width", "4"));
       element_values = Integer.parseInt(props.getProperty("element_values", "2"));

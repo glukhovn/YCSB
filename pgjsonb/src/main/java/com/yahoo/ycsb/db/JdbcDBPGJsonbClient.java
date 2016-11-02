@@ -65,6 +65,15 @@ public class JdbcDBPGJsonbClient extends DB implements JdbcDBClientConstants {
   private boolean nested_key;
   private boolean jsonb_path_ops;
   private boolean field_index;
+
+  private boolean select_all_fields;
+  private boolean select_one_field;
+  private String select_field_path;
+
+  private boolean update_one_field;
+  private boolean update_all_fields;
+  private String update_field;
+
   private int nesting_key_depth;
   private int document_depth;
   private int document_width;
@@ -197,6 +206,15 @@ public class JdbcDBPGJsonbClient extends DB implements JdbcDBClientConstants {
 		nested_key = Boolean.parseBoolean(props.getProperty(NESTED_KEY, "false"));
 		jsonb_path_ops = Boolean.parseBoolean(props.getProperty("jsonb_path_ops", "true"));
 		field_index = Boolean.parseBoolean(props.getProperty("field_index", "false"));
+
+		select_all_fields = Boolean.parseBoolean(props.getProperty("select_all_fields", "true"));
+		select_one_field = Boolean.parseBoolean(props.getProperty("select_one_field", "false"));
+		select_field_path = Boolean.parseBoolean(props.getProperty("select_field_path", ""));
+
+		update_all_fields = Boolean.parseBoolean(props.getProperty("update_all_fields", "true"));
+		update_one_field = Boolean.parseBoolean(props.getProperty("update_one_field", "false"));
+		select_field_path = Boolean.parseBoolean(props.getProperty("update_field", ""));
+
 		nesting_key_depth = Integer.parseInt(props.getProperty("depth", "10"));
  		document_depth = Integer.parseInt(props.getProperty("document_depth", "3"));
  		document_width = Integer.parseInt(props.getProperty("document_width", "4"));
