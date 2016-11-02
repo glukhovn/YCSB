@@ -202,11 +202,11 @@ public class MongoDbClient extends DB {
 
 	  select_all_fields = Boolean.parseBoolean(props.getProperty("select_all_fields", "true"));
 	  select_one_field = Boolean.parseBoolean(props.getProperty("select_one_field", "false"));
-	  select_field_path = Boolean.parseBoolean(props.getProperty("select_field_path", ""));
+	  select_field_path = props.getProperty("select_field_path", "");
 
 	  update_all_fields = Boolean.parseBoolean(props.getProperty("update_all_fields", "true"));
 	  update_one_field = Boolean.parseBoolean(props.getProperty("update_one_field", "false"));
-	  select_field_path = Boolean.parseBoolean(props.getProperty("update_field", ""));
+	  update_field = props.getProperty("update_field", "");
 
       document_depth = Integer.parseInt(props.getProperty("document_depth", "3"));
       document_width = Integer.parseInt(props.getProperty("document_width", "4"));
@@ -433,9 +433,9 @@ public class MongoDbClient extends DB {
       }
 
       FindIterable<Document> findIterable = collection.find(query);
+      Document projection = new Document();
 
       if (fields != null && select_all_fields) {
-        Document projection = new Document();
         for (String field : fields) {
           projection.put(field, INCLUDE);
         }
@@ -558,7 +558,7 @@ public class MongoDbClient extends DB {
       }
 
       if (update_one_field) {
-        fieldsToSet.put(update_field, values.values()[0].toArray());
+        fieldsToSet.put(update_field, values.entrySet().iterator().next().getValue().toArray());
       }
 
       Document update = new Document("$set", fieldsToSet);
