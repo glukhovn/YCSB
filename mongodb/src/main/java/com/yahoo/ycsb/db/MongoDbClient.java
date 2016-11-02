@@ -327,7 +327,7 @@ public class MongoDbClient extends DB {
 
             // put values
             for(int i = 0; i < element_values; i++) {
-              obj.put(String.format("%s%d", COLUMN_PREFIX, index), val_list.pop());
+              obj.put(String.format("%s%d", COLUMN_PREFIX, index), val_list.pop().toArray());
               index++;
             }
 
@@ -343,7 +343,7 @@ public class MongoDbClient extends DB {
             else {
               // put values
               for(int i = 0; i < element_obj; i++) {
-                obj.put(String.format("%s%d", COLUMN_PREFIX, index), val_list.pop());
+                obj.put(String.format("%s%d", COLUMN_PREFIX, index), val_list.pop().toArray());
                 index++;
               }
             }
