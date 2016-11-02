@@ -209,11 +209,11 @@ public class JdbcDBPGJsonbClient extends DB implements JdbcDBClientConstants {
 
 		select_all_fields = Boolean.parseBoolean(props.getProperty("select_all_fields", "true"));
 		select_one_field = Boolean.parseBoolean(props.getProperty("select_one_field", "false"));
-		select_field_path = Boolean.parseBoolean(props.getProperty("select_field_path", ""));
+		select_field_path = props.getProperty("select_field_path");
 
 		update_all_fields = Boolean.parseBoolean(props.getProperty("update_all_fields", "true"));
 		update_one_field = Boolean.parseBoolean(props.getProperty("update_one_field", "false"));
-		select_field_path = Boolean.parseBoolean(props.getProperty("update_field", ""));
+		update_field = props.getProperty("update_field");
 
 		nesting_key_depth = Integer.parseInt(props.getProperty("depth", "10"));
  		document_depth = Integer.parseInt(props.getProperty("document_depth", "3"));
@@ -293,7 +293,7 @@ public class JdbcDBPGJsonbClient extends DB implements JdbcDBClientConstants {
 	
 	private PreparedStatement createAndCacheReadStatement(StatementType readType, String key)
 	throws SQLException {
-    StringBuilder read = new StringBuilder()
+    StringBuilder read = new StringBuilder();
 
     if (select_all_fields) {
       read.append("SELECT data FROM ");
@@ -486,8 +486,8 @@ public class JdbcDBPGJsonbClient extends DB implements JdbcDBClientConstants {
       if (updateStatement == null) {
         updateStatement = createAndCacheUpdateStatement(type, key);
       }
-	  StringBuilder update_jsonb = new StringBuilder("{");
-      if (update_all_fields) }
+      StringBuilder update_jsonb = new StringBuilder("{");
+      if (update_all_fields) {
         int index = 1;
         for (Map.Entry<String, ByteIterator> entry : values.entrySet()) {
           if (index > 1)
@@ -507,7 +507,7 @@ public class JdbcDBPGJsonbClient extends DB implements JdbcDBClientConstants {
       if (update_one_field) {
         update_jsonb.append(update_field);
         update_jsonb.append(": \"");
-        update_jsonb.append(StringEscapeUtils.escapeJava(entry.getValue().toString()));
+        update_jsonb.append(StringEscapeUtils.escapeJava(values.entrySet().iterator().next().getValue().toString()));
         update_jsonb.append("\"");
       }
 
