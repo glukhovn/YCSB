@@ -119,18 +119,18 @@ public class MongoDbClient extends DB {
   private static String NESTED_KEY = "yscb_key";
   private static String COLUMN_PREFIX = "field";
 
-  private boolean select_all_fields;
-  private boolean select_one_field;
-  private String select_field_path;
+  private static boolean select_all_fields;
+  private static boolean select_one_field;
+  private static String select_field_path;
 
-  private boolean update_one_field;
-  private boolean update_all_fields;
-  private String update_field;
+  private static boolean update_one_field;
+  private static boolean update_all_fields;
+  private static String update_field;
 
-  private int document_depth;
-  private int document_width;
-  private int element_values;
-  private int element_obj;
+  private static int document_depth;
+  private static int document_width;
+  private static int element_values;
+  private static int element_obj;
 
   /**
    * Cleanup any state for this DB. Called once per DB instance; there is one DB

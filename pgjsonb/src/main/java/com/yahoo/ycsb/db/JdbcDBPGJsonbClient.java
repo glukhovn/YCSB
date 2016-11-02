@@ -61,24 +61,24 @@ public class JdbcDBPGJsonbClient extends DB implements JdbcDBClientConstants {
   private boolean initialized = false;
   private Properties props;
 
-  private boolean flat_key;
-  private boolean nested_key;
-  private boolean jsonb_path_ops;
-  private boolean field_index;
+  private static boolean flat_key;
+  private static boolean nested_key;
+  private static boolean jsonb_path_ops;
+  private static boolean field_index;
 
-  private boolean select_all_fields;
-  private boolean select_one_field;
-  private String select_field_path;
+  private static boolean select_all_fields;
+  private static boolean select_one_field;
+  private static String select_field_path;
 
-  private boolean update_one_field;
-  private boolean update_all_fields;
-  private String update_field;
+  private static boolean update_one_field;
+  private static boolean update_all_fields;
+  private static String update_field;
 
-  private int nesting_key_depth;
-  private int document_depth;
-  private int document_width;
-  private int element_values;
-  private int element_obj;
+  private static int nesting_key_depth;
+  private static int document_depth;
+  private static int document_width;
+  private static int element_values;
+  private static int element_obj;
 
   private Integer jdbcFetchSize;
   private static final String DEFAULT_PROP = "";
