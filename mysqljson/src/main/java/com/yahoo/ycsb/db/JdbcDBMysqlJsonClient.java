@@ -335,11 +335,11 @@ public class JdbcDBMysqlJsonClient extends DB implements JdbcDBClientConstants {
     update.append(" SET data = json_set(data, \"");
 
     if (update_all_fields) {
+      update.append("$.");
       for (int i = 0; i < updateType.numFields; i++) {
-        update.append(", '$.");
         update.append(COLUMN_PREFIX);
         update.append(i+2);
-        update.append("', ");
+        update.append("\", ");
         update.append("?");
       }
     }
