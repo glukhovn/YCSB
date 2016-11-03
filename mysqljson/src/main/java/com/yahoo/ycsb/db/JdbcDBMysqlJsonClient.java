@@ -207,11 +207,11 @@ public class JdbcDBMysqlJsonClient extends DB implements JdbcDBClientConstants {
 
 		select_all_fields = Boolean.parseBoolean(props.getProperty("select_all_fields", "true"));
 		select_one_field = Boolean.parseBoolean(props.getProperty("select_one_field", "false"));
-		select_field_path = Boolean.parseBoolean(props.getProperty("select_field_path", ""));
+		select_field_path = props.getProperty("select_field_path", "");
 
 		update_all_fields = Boolean.parseBoolean(props.getProperty("update_all_fields", "true"));
 		update_one_field = Boolean.parseBoolean(props.getProperty("update_one_field", "false"));
-		select_field_path = Boolean.parseBoolean(props.getProperty("update_field", ""));
+		update_field = props.getProperty("update_field", "");
 
 
  		document_depth = Integer.parseInt(props.getProperty("document_depth", "3"));
@@ -291,7 +291,7 @@ public class JdbcDBMysqlJsonClient extends DB implements JdbcDBClientConstants {
 	
 	private PreparedStatement createAndCacheReadStatement(StatementType readType, String key)
 	throws SQLException {
-    StringBuilder read = new StringBuilder()
+    StringBuilder read = new StringBuilder();
 
     if (select_all_fields) {
       read.append("SELECT data FROM ");
@@ -305,7 +305,6 @@ public class JdbcDBMysqlJsonClient extends DB implements JdbcDBClientConstants {
       read.append(readType.tableName);
     }
 
-    read.append(readType.tableName);
     read.append(" WHERE ");
     read.append(PRIMARY_KEY);
     read.append(" = ");
@@ -333,7 +332,7 @@ public class JdbcDBMysqlJsonClient extends DB implements JdbcDBClientConstants {
 	throws SQLException {
     StringBuilder update = new StringBuilder("UPDATE ");
     update.append(updateType.tableName);
-    update.append(" SET data = json_set(data");
+    update.append(" SET data = json_set(data, \"");
 
     if (update_all_fields) {
       for (int i = 0; i < updateType.numFields; i++) {
@@ -347,7 +346,7 @@ public class JdbcDBMysqlJsonClient extends DB implements JdbcDBClientConstants {
 
     if (update_one_field) {
       update.append(update_field);
-      update.append(", ?")
+      update.append("\", ?");
     }
 
     update.append(") WHERE ");
@@ -445,15 +444,15 @@ public class JdbcDBMysqlJsonClient extends DB implements JdbcDBClientConstants {
         updateStatement = createAndCacheUpdateStatement(type, key);
       }
 
+      int index = 1;
       if (update_all_fields) {
-        int index = 1;
         for (Map.Entry<String, ByteIterator> entry : values.entrySet()) {
           updateStatement.setString(index++, entry.getValue().toString());
         }
       }
 
       if (update_one_field) {
-        updateStatement.setString(index++, values.values()[0].toString());
+        updateStatement.setString(index++, values.entrySet().iterator().next().getValue().toString());
       }
 
       updateStatement.setString(index, String.format("\"%s\"", key));
