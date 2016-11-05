@@ -121,7 +121,7 @@ public class MongoDbClient extends DB {
 
   private static boolean select_all_fields;
   private static boolean select_one_field;
-  private static String select_field_path;
+  private static String[] select_field_path;
 
   private static boolean update_one_field;
   private static boolean update_all_fields;
@@ -202,7 +202,7 @@ public class MongoDbClient extends DB {
 
 	  select_all_fields = Boolean.parseBoolean(props.getProperty("select_all_fields", "true"));
 	  select_one_field = Boolean.parseBoolean(props.getProperty("select_one_field", "false"));
-	  select_field_path = props.getProperty("select_field_path", "");
+	  select_field_path = props.getProperty("select_field_path", "").split(",");
 
 	  update_all_fields = Boolean.parseBoolean(props.getProperty("update_all_fields", "true"));
 	  update_one_field = Boolean.parseBoolean(props.getProperty("update_one_field", "false"));
@@ -442,8 +442,10 @@ public class MongoDbClient extends DB {
         findIterable.projection(projection);
       }
 
-      if (fields != null && select_one_field) {
-        projection.put(select_field_path, INCLUDE);
+      if (select_one_field) {
+	    for(String field : select_field_path) {
+          projection.put(field, INCLUDE);
+	    }
         findIterable.projection(projection);
       }
 
