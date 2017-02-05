@@ -64,6 +64,7 @@ public class JdbcDBPGJsonbClient extends DB implements JdbcDBClientConstants {
   private static boolean flat_key;
   private static boolean nested_key;
   private static boolean jsonb_path_ops;
+  private static boolean jsonb_path_ops_no_parse;
   private static boolean field_index;
 
   private static boolean select_all_fields;
@@ -205,6 +206,7 @@ public class JdbcDBPGJsonbClient extends DB implements JdbcDBClientConstants {
 		flat_key = Boolean.parseBoolean(props.getProperty(FLAT_KEY, "true"));
 		nested_key = Boolean.parseBoolean(props.getProperty(NESTED_KEY, "false"));
 		jsonb_path_ops = Boolean.parseBoolean(props.getProperty("jsonb_path_ops", "true"));
+		jsonb_path_ops_no_parse = Boolean.parseBoolean(props.getProperty("jsonb_path_ops_no_parse", "true"));
 		field_index = Boolean.parseBoolean(props.getProperty("field_index", "false"));
 
 		select_all_fields = Boolean.parseBoolean(props.getProperty("select_all_fields", "true"));
