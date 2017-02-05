@@ -311,6 +311,10 @@ public class JdbcDBPGJsonbClient extends DB implements JdbcDBClientConstants {
       read.append(" WHERE data @> ?::jsonb");
     }
 
+    if (jsonb_path_ops_no_parse) {
+      read.append(" WHERE data @> jsonb_build_object(?, ?)");
+    }
+
     if (field_index && flat_key) {
       read.append(" WHERE data->>'");
       read.append(PRIMARY_KEY);
@@ -404,7 +408,7 @@ public class JdbcDBPGJsonbClient extends DB implements JdbcDBClientConstants {
 
       StringBuilder readCondition = new StringBuilder("{");
 
-      if (flat_key && !field_index) {
+      if (flat_key && jsonb_path_ops) {
           readCondition.append("\"");
           readCondition.append(PRIMARY_KEY);
           readCondition.append("\": \"");
@@ -412,6 +416,11 @@ public class JdbcDBPGJsonbClient extends DB implements JdbcDBClientConstants {
           readCondition.append("\"}");
 
           readStatement.setString(1, readCondition.toString());
+      }
+
+      if (flat_key && jsonb_path_ops_no_parse) {
+          readStatement.setString(1, PRIMARY_KEY);
+          readStatement.setString(2, key);
       }
 
       if (nested_key && !field_index) {
