@@ -519,7 +519,7 @@ public class JdbcDBPGJsonbClient extends DB implements JdbcDBClientConstants {
         update_jsonb.append(update_field);
         update_jsonb.append(": \"");
         update_jsonb.append(StringEscapeUtils.escapeJava(values.entrySet().iterator().next().getValue().toString()));
-        update_jsonb.append("\"");
+        update_jsonb.append("\"}");
       }
 
       StringBuilder updateCondition = new StringBuilder();
