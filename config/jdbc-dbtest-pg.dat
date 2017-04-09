@@ -1,0 +1,8 @@
+db.driver=org.postgresql.Driver
+db.url=jdbc:postgresql://dbtest.sai.msu.ru:5432/ycsb
+db.user=ycsb
+db.passwd=ycsb
+#db.batchsize=1000
+#jdbc.batchupdateapi=true
+
+table=usertable_flat

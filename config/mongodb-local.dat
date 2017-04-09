@@ -1,0 +1,5 @@
+mongodb.url=mongodb://ycsb:ycsb@localhost:27017/ycsb?w=0
+mongodb.batchsize=100
+db.batchsize=1000
+
+#&maxPoolSize=128
