@@ -49,6 +49,7 @@ public class JdbcDBCreateTable implements JdbcDBClientConstants {
     String url = props.getProperty(CONNECTION_URL);
     int fieldcount = Integer.parseInt(props.getProperty(FIELD_COUNT_PROPERTY, 
         FIELD_COUNT_PROPERTY_DEFAULT));
+    boolean jsonbPathOps = Boolean.parseBoolean(props.getProperty("jsonb_path_ops", "false"));
     
     if (driver == null || username == null || url == null) {
       throw new SQLException("Missing connection information.");
@@ -70,18 +71,12 @@ public class JdbcDBCreateTable implements JdbcDBClientConstants {
       
       sql = new StringBuilder("CREATE TABLE ");
       sql.append(tablename);
-      sql.append(" (KEY VARCHAR PRIMARY KEY");
-      
-      for (int idx = 0; idx < fieldcount; idx++) {
-        sql.append(", FIELD");
-        sql.append(idx);
-        sql.append(" VARCHAR");
-      }
-      sql.append(");");
-      
+      sql.append(" (DATA jsonb);");
       stmt.execute(sql.toString());
+      stmt.execute(jsonbPathOps ? "CREATE INDEX ON " + tablename + " USING gin(DATA jsonb_path_ops)"
+                                : "CREATE UNIQUE INDEX ON " + tablename + "((DATA->>'YCSB_KEY'))");
       
-      System.out.println("Table " + tablename + " created..");
+      System.out.println("Table " + tablename + " created.");
     } catch (ClassNotFoundException e) {
       throw new SQLException("JDBC Driver class not found.");
     } finally {
@@ -200,11 +195,22 @@ public class JdbcDBCreateTable implements JdbcDBClientConstants {
 
     props = fileprops;
     
+    if (tablename == null)
+      tablename = props.getProperty("table");
+
     if (tablename == null) {
       System.err.println("table name missing.");
       usageMessage();
       System.exit(1);
     }
+
+    if (fieldcount < 0) {
+      String prop = props.getProperty("fieldcount");
+      if (prop != null)
+        try {
+          fieldcount = Integer.parseInt(prop);
+        } catch (NumberFormatException e) { }
+	}
     
     if (fieldcount > 0) {
       props.setProperty(FIELD_COUNT_PROPERTY, String.valueOf(fieldcount));

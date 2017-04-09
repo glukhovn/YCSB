@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- 
+<!--
 Copyright (c) 2012 - 2015 YCSB contributors. All rights reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -24,9 +24,9 @@ LICENSE file.
     <version>0.13.0-SNAPSHOT</version>
     <relativePath>../binding-parent</relativePath>
   </parent>
-  
-  <artifactId>pgjsonb-binding</artifactId>
-  <name>JDBC PG Jsonb DB Binding</name>
+
+  <artifactId>jdbc-json-binding</artifactId>
+  <name>JDBC Json Binding</name>
   <packaging>jar</packaging>
 
   <properties>
@@ -61,17 +61,6 @@ LICENSE file.
         <groupId>org.json</groupId>
         <artifactId>json</artifactId>
         <version>20160810</version>
-    </dependency>
-    <dependency>
-      <groupId>org.postgresql</groupId>
-      <artifactId>postgresql</artifactId>
-      <version>9.4.1212</version>
-    </dependency>
-    <dependency>
-      <groupId>com.yahoo.ycsb</groupId>
-      <artifactId>jdbc-json-binding</artifactId>
-      <version>${project.version}</version>
-      <scope>provided</scope>
     </dependency>
   </dependencies>
 </project>

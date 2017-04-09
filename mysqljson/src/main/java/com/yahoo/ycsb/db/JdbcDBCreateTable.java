@@ -61,26 +61,13 @@ public class JdbcDBCreateTable implements JdbcDBClientConstants {
       
       conn = DriverManager.getConnection(url, username, password);
       Statement stmt = conn.createStatement();
-      
-      StringBuilder sql = new StringBuilder("DROP TABLE IF EXISTS ");
-      sql.append(tablename);
-      sql.append(";");
-      
-      stmt.execute(sql.toString());
-      
-      sql = new StringBuilder("CREATE TABLE ");
-      sql.append(tablename);
-      sql.append(" (KEY VARCHAR PRIMARY KEY");
-      
-      for (int idx = 0; idx < fieldcount; idx++) {
-        sql.append(", FIELD");
-        sql.append(idx);
-        sql.append(" VARCHAR");
-      }
-      sql.append(");");
-      
-      stmt.execute(sql.toString());
-      
+
+      stmt.execute("DROP TABLE IF EXISTS " + tablename + ";");
+      stmt.execute("CREATE TABLE " + tablename +
+                   "(data json," +
+                   " ycsb_key VARCHAR(25) GENERATED ALWAYS AS (data->>'$.YCSB_KEY') STORED PRIMARY KEY");
+                   //" INDEX ycsb_key_idx(ycsb_key));");
+
       System.out.println("Table " + tablename + " created..");
     } catch (ClassNotFoundException e) {
       throw new SQLException("JDBC Driver class not found.");
@@ -200,16 +187,27 @@ public class JdbcDBCreateTable implements JdbcDBClientConstants {
 
     props = fileprops;
     
+    if (tablename == null)
+      tablename = props.getProperty("table");
+
     if (tablename == null) {
       System.err.println("table name missing.");
       usageMessage();
       System.exit(1);
     }
     
+    if (fieldcount < 0) {
+      String prop = props.getProperty("fieldcount");
+      if (prop != null)
+        try {
+          fieldcount = Integer.parseInt(prop);
+        } catch (NumberFormatException e) { }
+    }
+
     if (fieldcount > 0) {
       props.setProperty(FIELD_COUNT_PROPERTY, String.valueOf(fieldcount));
     }
-    
+
     try {
       createTable(props, tablename);
     } catch (SQLException e) {

@@ -148,6 +148,7 @@ LICENSE file.
     <module>solr6</module>
     <module>tarantool</module>
     <!--<module>voldemort</module>-->
+    <module>jdbc-json</module>
   </modules>
 
   <build>

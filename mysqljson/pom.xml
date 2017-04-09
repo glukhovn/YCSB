@@ -35,6 +35,12 @@ LICENSE file.
 
   <dependencies>
     <dependency>
+      <groupId>com.yahoo.ycsb</groupId>
+      <artifactId>jdbc-json-binding</artifactId>
+      <version>${project.version}</version>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
       <groupId>org.apache.openjpa</groupId>
       <artifactId>openjpa-jdbc</artifactId>
       <version>${openjpa.jdbc.version}</version>
