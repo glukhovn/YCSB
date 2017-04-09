@@ -388,9 +388,9 @@ public class JdbcDBPGJsonbClient extends DB implements JdbcDBClientConstants {
     select.append(" WHERE data->>'");
     select.append(PRIMARY_KEY);
     select.append("' >= ?");
-    select.append(" ORDER BY ");
+    select.append(" ORDER BY data->>'");
     select.append(PRIMARY_KEY);
-    select.append(" LIMIT ?");
+    select.append("' LIMIT ?");
     PreparedStatement scanStatement = getShardConnectionByKey(key).prepareStatement(select.toString());
     if (this.jdbcFetchSize != null) scanStatement.setFetchSize(this.jdbcFetchSize);
     PreparedStatement stmt = cachedStatements.putIfAbsent(scanType, scanStatement);
@@ -525,7 +525,7 @@ public class JdbcDBPGJsonbClient extends DB implements JdbcDBClientConstants {
       StringBuilder updateCondition = new StringBuilder();
 
       if (jsonb_path_ops) {
-        updateCondition.append("{\"}");
+        updateCondition.append("{\"");
         updateCondition.append(PRIMARY_KEY);
         updateCondition.append("\": \"");
         updateCondition.append(key);
