@@ -56,6 +56,7 @@ public class JdbcDBPGJsonbClient extends JdbcJsonClient {
   private static boolean jsonb_path_ops;
   private static boolean jsonb_path_ops_no_parse;
   private static boolean field_index;
+  private static boolean sql_json;
 
   /**
    * Initialize the database connection and set it up for sending requests to the database.
@@ -71,9 +72,10 @@ public class JdbcDBPGJsonbClient extends JdbcJsonClient {
 
     Properties props = getProperties();
 
-    jsonb_path_ops = Boolean.parseBoolean(props.getProperty("jsonb_path_ops", "true"));
+    jsonb_path_ops = Boolean.parseBoolean(props.getProperty("jsonb_path_ops", "false"));
     jsonb_path_ops_no_parse = Boolean.parseBoolean(props.getProperty("jsonb_path_ops_no_parse", "true"));
-    field_index = Boolean.parseBoolean(props.getProperty("field_index", "false"));
+    field_index = Boolean.parseBoolean(props.getProperty("field_index", "true"));
+    sql_json = Boolean.parseBoolean(props.getProperty("sql_json", "false"));
 
     super.init();
 
@@ -100,12 +102,21 @@ public class JdbcDBPGJsonbClient extends JdbcJsonClient {
       else
         builder.append("?::jsonb");
     } else if (field_index) {
-      builder.append(" WHERE data->>");
+      if (sql_json) {
+        builder.append(" WHERE JSON_VALUE(data, '$");
 
-      for (int i = 1; i < nesting_key_depth; i++)
-        builder.append("'").append(PRIMARY_KEY).append(i).append("'->>");
+        for (int i = 1; i < nesting_key_depth; i++)
+          builder.append(".").append(PRIMARY_KEY).append(i);
 
-      builder.append("'" + PRIMARY_KEY + "'").append(" = ?");
+        builder.append(".").append(PRIMARY_KEY).append("' RETURNING text) = ?");
+      } else {
+        builder.append(" WHERE data->>");
+
+        for (int i = 1; i < nesting_key_depth; i++)
+          builder.append("'").append(PRIMARY_KEY).append(i).append("'->>");
+
+        builder.append("'" + PRIMARY_KEY + "'").append(" = ?");
+      }
     }
 
     return builder;
@@ -130,13 +141,16 @@ public class JdbcDBPGJsonbClient extends JdbcJsonClient {
         for (String field : type.fields) {
           if (index++ > 0)
             read.append(", ");
-          read.append("data->>'").append(field).append("' AS \"").append(field).append('"');
+          appendKeyField(read, field).append(" AS \"").append(field).append('"');
         }
       }
     }
 
     if (select_one_field)
-      read.append("data->>").append(select_field_path);
+      if (sql_json)
+        read.append("JSON_VALUE(data, '$.").append(select_field_path).append("')");
+      else
+        read.append("data->>").append(select_field_path);
 
     read.append(" FROM ").append(type.tableName);
 
@@ -165,11 +179,21 @@ public class JdbcDBPGJsonbClient extends JdbcJsonClient {
           .append(" SET data = data || ?::jsonb")).toString();
   }
 
+  private StringBuilder appendKeyField(StringBuilder builder, String key) {
+    if (sql_json)
+      return builder.append("JSON_VALUE(data, '$.").append(key).append("' RETURNING text)");
+    else
+      return builder.append("data->>'").append(key).append("'");
+  }
+
   @Override
   protected String createScanStatement(StatementType scanType) {
+    String key = appendKeyField(new StringBuilder(), PRIMARY_KEY).toString();
+
     return createSelectStatement(scanType)
-      .append(" WHERE data->>'").append(PRIMARY_KEY).append("' >= ?")
-      .append(" ORDER BY data->>'").append(PRIMARY_KEY).append("' LIMIT ?")
-      .toString();
+          .append(" WHERE ").append(key).append(" >= ?")
+          .append(" ORDER BY ").append(key)
+          .append(" LIMIT ?")
+          .toString();
   }
 }

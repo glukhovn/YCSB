@@ -50,7 +50,11 @@ public class JdbcDBCreateTable implements JdbcDBClientConstants {
     int fieldcount = Integer.parseInt(props.getProperty(FIELD_COUNT_PROPERTY, 
         FIELD_COUNT_PROPERTY_DEFAULT));
     boolean jsonbPathOps = Boolean.parseBoolean(props.getProperty("jsonb_path_ops", "false"));
-    
+    boolean sqlJson = Boolean.parseBoolean(props.getProperty("sql_json", "false"));
+    boolean ginFastUpdate = Boolean.parseBoolean(props.getProperty("gin_fast_update", "false"));
+    boolean jsonbc = Boolean.parseBoolean(props.getProperty("jsonbc", "false"));
+    boolean pglz = Boolean.parseBoolean(props.getProperty("pglz", "true"));
+
     if (driver == null || username == null || url == null) {
       throw new SQLException("Missing connection information.");
     }
@@ -71,11 +75,17 @@ public class JdbcDBCreateTable implements JdbcDBClientConstants {
       
       sql = new StringBuilder("CREATE TABLE ");
       sql.append(tablename);
-      sql.append(" (DATA jsonb);");
+      sql.append(" (DATA jsonb" + (jsonbc ? " COMPRESSED jsonbc" : "") + ");");
       stmt.execute(sql.toString());
-      stmt.execute(jsonbPathOps ? "CREATE INDEX ON " + tablename + " USING gin(DATA jsonb_path_ops)"
-                                : "CREATE UNIQUE INDEX ON " + tablename + "((DATA->>'YCSB_KEY'))");
-      
+      if (!pglz)
+        stmt.execute("ALTER TABLE " + tablename + " ALTER data SET STORAGE EXTERNAL;");
+      stmt.execute(jsonbPathOps ? "CREATE INDEX ON " + tablename +
+                                  " USING gin(DATA jsonb_path_ops)" +
+                                   "WITH (fastupdate =" + (ginFastUpdate ? "ON" : "OFF") + ")"
+                                : "CREATE UNIQUE INDEX ON " + tablename +
+                                  (sqlJson ? "((JSON_VALUE(data, '$.YCSB_KEY' RETURNING text)))"
+                                           : "((DATA->>'YCSB_KEY'))"));
+
       System.out.println("Table " + tablename + " created.");
     } catch (ClassNotFoundException e) {
       throw new SQLException("JDBC Driver class not found.");
