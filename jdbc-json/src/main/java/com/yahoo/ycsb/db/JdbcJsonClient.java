@@ -73,6 +73,7 @@ public abstract class JdbcJsonClient extends DB implements JdbcDBClientConstants
   private boolean initialized = false;
   private Properties props;
 
+  protected static boolean pk_column;
   protected static boolean flat_key;
   protected static boolean nested_key;
 
@@ -249,6 +250,7 @@ public abstract class JdbcJsonClient extends DB implements JdbcDBClientConstants
     String passwd = props.getProperty(CONNECTION_PASSWD, DEFAULT_PROP);
     String driver = props.getProperty(DRIVER_CLASS);
 
+    pk_column = Boolean.parseBoolean(props.getProperty(PK_COLUMN, "false"));
     flat_key = Boolean.parseBoolean(props.getProperty(FLAT_KEY, "true"));
     nested_key = Boolean.parseBoolean(props.getProperty(NESTED_KEY, "false"));
 
@@ -559,6 +561,8 @@ public abstract class JdbcJsonClient extends DB implements JdbcDBClientConstants
         insertStatement = createAndCacheStatement(type, key, createInsertStatement(type));
 
       insertStatement.setString(1, buildInsertValue(key, values));
+      if (pk_column)
+        insertStatement.setString(2, key);
 
       // Using the batch insert API
       if (batchUpdates) {

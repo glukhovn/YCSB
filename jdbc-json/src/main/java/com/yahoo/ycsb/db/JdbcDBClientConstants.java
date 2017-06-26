@@ -64,6 +64,7 @@ public interface JdbcDBClientConstants {
   public static String COLUMN_PREFIX = "FIELD";
 
   /**  */
+  public static final String PK_COLUMN = "pk_column";
   public static final String FLAT_KEY = "flat_key";
   public static final String NESTED_KEY = "nested_key";
   public static final String DOCUMENT_DEPTH = "document_depth";

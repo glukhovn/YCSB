@@ -58,7 +58,9 @@ public class JdbcDBMysqlJsonClient extends JdbcJsonClient {
   @Override
   protected String createInsertStatement(StatementType insertType) {
     return new StringBuilder("INSERT INTO ").append(insertType.tableName)
-        .append("(data) VALUES(?)").toString();
+      .append("(data").append(pk_column ? ", " + PRIMARY_KEY : "").append(")")
+      .append(" VALUES (?").append(pk_column ? ", ?" : "").append(")")
+      .toString();
   }
 
   private StringBuilder createSelectStatement(StatementType type) {

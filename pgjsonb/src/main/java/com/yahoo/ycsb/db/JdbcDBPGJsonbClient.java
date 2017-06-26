@@ -84,7 +84,7 @@ public class JdbcDBPGJsonbClient extends JdbcJsonClient {
 
   @Override
   protected String buildConditionKey(String key) {
-    if (field_index || (jsonb_path_ops && jsonb_path_ops_no_parse))
+    if (pk_column || field_index || (jsonb_path_ops && jsonb_path_ops_no_parse))
       return key;
 
     StringBuilder condition = new StringBuilder("{");
@@ -102,7 +102,9 @@ public class JdbcDBPGJsonbClient extends JdbcJsonClient {
       else
         builder.append("?::jsonb");
     } else if (field_index) {
-      if (sql_json) {
+      if (pk_column)
+        builder.append(" WHERE ").append(PRIMARY_KEY).append(" = ?");
+      else if (sql_json) {
         builder.append(" WHERE JSON_VALUE(data, '$");
 
         for (int i = 1; i < nesting_key_depth; i++)
@@ -126,7 +128,8 @@ public class JdbcDBPGJsonbClient extends JdbcJsonClient {
   protected String createInsertStatement(StatementType insertType) {
     return new StringBuilder("INSERT INTO ")
       .append(insertType.tableName)
-      .append("(data) VALUES(?::jsonb)")
+      .append("(data").append(pk_column ? ", " + PRIMARY_KEY : "").append(")")
+      .append(" VALUES (?::jsonb").append(pk_column ? ", ?::text" : "").append(")")
       .toString();
   }
 
@@ -188,7 +191,8 @@ public class JdbcDBPGJsonbClient extends JdbcJsonClient {
 
   @Override
   protected String createScanStatement(StatementType scanType) {
-    String key = appendKeyField(new StringBuilder(), PRIMARY_KEY).toString();
+    String key = pk_column ? PRIMARY_KEY
+                           : appendKeyField(new StringBuilder(), PRIMARY_KEY).toString();
 
     return createSelectStatement(scanType)
           .append(" WHERE ").append(key).append(" >= ?")

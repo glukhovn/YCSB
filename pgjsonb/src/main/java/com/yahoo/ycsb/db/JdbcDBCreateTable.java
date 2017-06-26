@@ -49,6 +49,7 @@ public class JdbcDBCreateTable implements JdbcDBClientConstants {
     String url = props.getProperty(CONNECTION_URL);
     int fieldcount = Integer.parseInt(props.getProperty(FIELD_COUNT_PROPERTY, 
         FIELD_COUNT_PROPERTY_DEFAULT));
+    boolean pk_column = Boolean.parseBoolean(props.getProperty(PK_COLUMN, "false"));
     boolean jsonbPathOps = Boolean.parseBoolean(props.getProperty("jsonb_path_ops", "false"));
     boolean sqlJson = Boolean.parseBoolean(props.getProperty("sql_json", "false"));
     boolean ginFastUpdate = Boolean.parseBoolean(props.getProperty("gin_fast_update", "false"));
@@ -72,14 +73,18 @@ public class JdbcDBCreateTable implements JdbcDBClientConstants {
       sql.append(";");
       
       stmt.execute(sql.toString());
-      
+
       sql = new StringBuilder("CREATE TABLE ");
       sql.append(tablename);
-      sql.append(" (DATA jsonb" + (jsonbc ? " COMPRESSED jsonbc" : "") + ");");
+      sql.append(" (");
+      if (pk_column)
+        sql.append(PRIMARY_KEY).append(" text PRIMARY KEY, ");
+      sql.append("DATA jsonb" + (jsonbc ? " COMPRESSED jsonbc" : "") + ");");
       stmt.execute(sql.toString());
       if (!pglz)
         stmt.execute("ALTER TABLE " + tablename + " ALTER data SET STORAGE EXTERNAL;");
-      stmt.execute(jsonbPathOps ? "CREATE INDEX ON " + tablename +
+      if (!pk_column)
+        stmt.execute(jsonbPathOps ? "CREATE INDEX ON " + tablename +
                                   " USING gin(DATA jsonb_path_ops)" +
                                    "WITH (fastupdate =" + (ginFastUpdate ? "ON" : "OFF") + ")"
                                 : "CREATE UNIQUE INDEX ON " + tablename +

@@ -49,6 +49,7 @@ public class JdbcDBCreateTable implements JdbcDBClientConstants {
     String url = props.getProperty(CONNECTION_URL);
     int fieldcount = Integer.parseInt(props.getProperty(FIELD_COUNT_PROPERTY, 
         FIELD_COUNT_PROPERTY_DEFAULT));
+    boolean pk_column = Boolean.parseBoolean(props.getProperty(PK_COLUMN, "false"));
     
     if (driver == null || username == null || url == null) {
       throw new SQLException("Missing connection information.");
@@ -63,12 +64,15 @@ public class JdbcDBCreateTable implements JdbcDBClientConstants {
       Statement stmt = conn.createStatement();
 
       stmt.execute("DROP TABLE IF EXISTS " + tablename + ";");
-      stmt.execute("CREATE TABLE " + tablename +
-                   "(data json," +
-                   " ycsb_key VARCHAR(25) GENERATED ALWAYS AS (data->>'$.YCSB_KEY') STORED PRIMARY KEY");
-                   //" INDEX ycsb_key_idx(ycsb_key));");
+      stmt.execute(
+        "CREATE TABLE " + tablename + "(" + (
+          pk_column
+            ? PRIMARY_KEY + " VARCHAR(25) PRIMARY KEY, data json"
+            : "data json, " + PRIMARY_KEY + " VARCHAR(25) GENERATED ALWAYS AS (data->>'$.YCSB_KEY') STORED PRIMARY KEY"
+        ) + ")"
+      );
 
-      System.out.println("Table " + tablename + " created..");
+      System.out.println("Table " + tablename + " created.");
     } catch (ClassNotFoundException e) {
       throw new SQLException("JDBC Driver class not found.");
     } finally {
