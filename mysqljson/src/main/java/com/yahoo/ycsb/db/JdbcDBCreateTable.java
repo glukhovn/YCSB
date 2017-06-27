@@ -50,6 +50,7 @@ public class JdbcDBCreateTable implements JdbcDBClientConstants {
     int fieldcount = Integer.parseInt(props.getProperty(FIELD_COUNT_PROPERTY, 
         FIELD_COUNT_PROPERTY_DEFAULT));
     boolean pk_column = Boolean.parseBoolean(props.getProperty(PK_COLUMN, "false"));
+    int partitions = Integer.parseInt(props.getProperty(PARTITION_COUNT_PROPERTY, "0"));
     
     if (driver == null || username == null || url == null) {
       throw new SQLException("Missing connection information.");
@@ -69,7 +70,8 @@ public class JdbcDBCreateTable implements JdbcDBClientConstants {
           pk_column
             ? PRIMARY_KEY + " VARCHAR(25) PRIMARY KEY, data json"
             : "data json, " + PRIMARY_KEY + " VARCHAR(25) GENERATED ALWAYS AS (data->>'$.YCSB_KEY') STORED PRIMARY KEY"
-        ) + ")"
+        ) + ")" +
+        (partitions > 0 ? " PARTITION BY KEY (" + PRIMARY_KEY + ") PARTITIONS " + partitions : "")
       );
 
       System.out.println("Table " + tablename + " created.");

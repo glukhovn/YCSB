@@ -55,6 +55,7 @@ public class JdbcDBCreateTable implements JdbcDBClientConstants {
     boolean ginFastUpdate = Boolean.parseBoolean(props.getProperty("gin_fast_update", "false"));
     boolean jsonbc = Boolean.parseBoolean(props.getProperty("jsonbc", "false"));
     boolean pglz = Boolean.parseBoolean(props.getProperty("pglz", "true"));
+    int partitions = Integer.parseInt(props.getProperty(PARTITION_COUNT_PROPERTY, "0"));
 
     if (driver == null || username == null || url == null) {
       throw new SQLException("Missing connection information.");
@@ -74,22 +75,48 @@ public class JdbcDBCreateTable implements JdbcDBClientConstants {
       
       stmt.execute(sql.toString());
 
+      String pk_expr =
+        pk_column ? PRIMARY_KEY :
+        jsonbPathOps ? null :
+        sqlJson ? "(JSON_VALUE(data, '$.'" + PRIMARY_KEY + "' RETURNING text))"
+                : "(DATA->>'" + PRIMARY_KEY + "')";
+
       sql = new StringBuilder("CREATE TABLE ");
       sql.append(tablename);
       sql.append(" (");
       if (pk_column)
-        sql.append(PRIMARY_KEY).append(" text PRIMARY KEY, ");
-      sql.append("DATA jsonb" + (jsonbc ? " COMPRESSED jsonbc" : "") + ");");
+        sql.append(PRIMARY_KEY).append(" text").append(partitions > 0 ? ", ": " PRIMARY KEY, ");
+      sql.append("DATA jsonb" + (jsonbc ? " COMPRESSED jsonbc" : "") + ")");
+      if (partitions > 0 && pk_expr != null)
+        sql.append(" PARTITION BY HASH (").append(pk_expr).append(")");
+      sql.append(";");
+
       stmt.execute(sql.toString());
+
       if (!pglz)
         stmt.execute("ALTER TABLE " + tablename + " ALTER data SET STORAGE EXTERNAL;");
-      if (!pk_column)
+
+      if (partitions > 0 && pk_expr != null) {
+        for (int i = 0; i < partitions; i++) {
+          String partname = tablename + "_" + i;
+
+          stmt.execute(
+            "CREATE TABLE " + partname +
+            " PARTITION OF " + tablename +
+            " FOR VALUES WITH (modulus " + partitions + ", remainder " + i + ");"
+          );
+
+          stmt.execute(
+            "CREATE UNIQUE INDEX ON " + partname + "(" + pk_expr + ");"
+          );
+        }
+      }
+
+      if (!pk_column && partitions <= 0)
         stmt.execute(jsonbPathOps ? "CREATE INDEX ON " + tablename +
-                                  " USING gin(DATA jsonb_path_ops)" +
-                                   "WITH (fastupdate =" + (ginFastUpdate ? "ON" : "OFF") + ")"
-                                : "CREATE UNIQUE INDEX ON " + tablename +
-                                  (sqlJson ? "((JSON_VALUE(data, '$.YCSB_KEY' RETURNING text)))"
-                                           : "((DATA->>'YCSB_KEY'))"));
+                                    " USING gin(DATA jsonb_path_ops)" +
+                                     "WITH (fastupdate =" + (ginFastUpdate ? "ON" : "OFF") + ")"
+                                  : "CREATE UNIQUE INDEX ON " + tablename + "(" + pk_expr + ")");
 
       System.out.println("Table " + tablename + " created.");
     } catch (ClassNotFoundException e) {

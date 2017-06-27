@@ -54,6 +54,9 @@ public interface JdbcDBClientConstants {
   /** Default number of fields in a record. */
   public static final String FIELD_COUNT_PROPERTY_DEFAULT="10";
 
+  /** The name of the property for the number of partitions in the table. */
+  public static final String PARTITION_COUNT_PROPERTY = "partitions";
+
   /** Representing a NULL value. */
   public static final String NULL_VALUE = "NULL";
 
