@@ -31,7 +31,7 @@ nth()
 	echo "$1"
 }
 
-extract_stats()
+extract_results()
 {
 	while read tag counter val
 	do
@@ -95,19 +95,19 @@ extract_stats()
 	"
 }
 
-#write_stats $db $workload $cfg $clients $stats
-write_stats()
+#write_results $db $workload $cfg $clients $res
+write_results()
 {
 	echo "$1	$2	$3	$4	$5"
 }
 
-extract_stats_dir()
+extract_results_dir()
 {
 	for f in $(ls  "$1"/run_*.out)
 	do
-		local stats=$(extract_stats "$f" "$2")
+		local res=$(extract_results "$f" "$2")
 		IFS="_" read cmd db workload clients cfg <<< "$(basename "${f%.*}")"
-		write_stats $db $workload $cfg $clients "$stats"
+		write_results $db $workload $cfg $clients "$res"
 	done
 }
 
@@ -226,7 +226,7 @@ run_workload()
 	{
 		test "$cmd" != "load" || create_table "$db" $props &&
 		checkpoint "$db" &&
-		ycsb $cmd "${db%-*}" $props -threads $clients -s -p exportfile="${out_file}"
+		ycsb $cmd "${db%%-*}" $props -threads $clients -s -p exportfile="${out_file}"
 	} > "${log_file}" 2>&1 ||
 	{
 		echo "FAILED, see ${log_file}"
@@ -234,13 +234,13 @@ run_workload()
 	}
 
 	test "$cfg" || cfg="_default"
-	
-	local stats=$(extract_stats "${out_file}" "$cmd")
-	throughput=$(nth 2 $stats)
+
+	local res=$(extract_results "${out_file}" "$cmd")
+	throughput=$(nth 2 $res)
 
 	test "$cmd" = "load" && workload="load_$workload"
 
-	write_stats "$db" "$workload" "${cfg:1}" "$clients" "$stats" >> "${out_dir}/stats"
+	write_results "$db" "$workload" "${cfg:1}" "$clients" "$res" >> "${out_dir}/results.tsv"
 }
 
 
@@ -299,7 +299,7 @@ run_tests()
 
 	echo "db	workload	config	clients	time	throughput\
 	ops1	lat1avg	lat1min	lat1max	lat1p95	lat1p99\
-	ops2	lat2avg	lat2min	lat2max	lat2p95	lat2p99" >> "results/${date}/stats" || return
+	ops2	lat2avg	lat2min	lat2max	lat2p95	lat2p99" >> "results/${date}/results.tsv" || return
 
 	while read cmd db workload nclients cfg
 	do
@@ -329,8 +329,8 @@ parse_args()
 trap exit SIGINT
 
 #run_workload "$@"
-#extract_stats "$@"
+#extract_results "$@"
 #parse_args "$@"
 run_tests "$@"
-#extract_stats_dir "$1"
+#extract_results_dir "$1"
 
