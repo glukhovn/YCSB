@@ -71,7 +71,7 @@ public class JdbcDBCreateTable implements JdbcDBClientConstants {
       
       StringBuilder sql = new StringBuilder("DROP TABLE IF EXISTS ");
       sql.append(tablename);
-      sql.append(";");
+      sql.append(" CASCADE;");
       
       stmt.execute(sql.toString());
 
