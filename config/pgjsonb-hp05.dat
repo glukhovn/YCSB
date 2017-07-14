@@ -1,0 +1,11 @@
+db.driver=org.postgresql.Driver
+db.url=jdbc:postgresql://192.168.0.54:5433/ycsb
+#?prepareThreshold=0
+db.reWriteBatchedInserts=true
+db.user=ycsb
+db.passwd=IsMFXAwGt3I
+db.batchsize=100
+jdbc.batchupdateapi=true
+table=usertable
+fillfactor=50
+
