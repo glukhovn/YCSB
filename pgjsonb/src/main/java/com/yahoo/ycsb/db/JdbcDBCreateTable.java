@@ -56,6 +56,9 @@ public class JdbcDBCreateTable implements JdbcDBClientConstants {
     boolean jsonbc = Boolean.parseBoolean(props.getProperty("jsonbc", "false"));
     boolean pglz = Boolean.parseBoolean(props.getProperty("pglz", "true"));
     int partitions = Integer.parseInt(props.getProperty(PARTITION_COUNT_PROPERTY, "0"));
+    int fillfactor = Integer.parseInt(props.getProperty("fillfactor", "0"));
+
+    String fillfactoropt = fillfactor != 0 ? " WITH (fillfactor=" + fillfactor + ")" : "";
 
     if (driver == null || username == null || url == null) {
       throw new SQLException("Missing connection information.");
@@ -85,10 +88,11 @@ public class JdbcDBCreateTable implements JdbcDBClientConstants {
       sql.append(tablename);
       sql.append(" (");
       if (pk_column)
-        sql.append(PRIMARY_KEY).append(" text").append(partitions > 0 ? ", ": " PRIMARY KEY, ");
+        sql.append(PRIMARY_KEY).append(" text").append(partitions > 0 ? "": " PRIMARY KEY" + fillfactoropt).append(", ");
       sql.append("DATA jsonb" + (jsonbc ? " COMPRESSED jsonbc" : "") + ")");
       if (partitions > 0 && pk_expr != null)
         sql.append(" PARTITION BY HASH (").append(pk_expr).append(")");
+      sql.append(fillfactoropt);
       sql.append(";");
 
       stmt.execute(sql.toString());
