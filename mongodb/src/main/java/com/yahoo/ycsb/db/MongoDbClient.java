@@ -127,6 +127,8 @@ public class MongoDbClient extends DB {
   private static boolean update_all_fields;
   private static String update_field;
 
+  private static String inc_field;
+
   private static int document_depth;
   private static int document_width;
   private static int element_values;
@@ -207,6 +209,8 @@ public class MongoDbClient extends DB {
 	  update_all_fields = Boolean.parseBoolean(props.getProperty("update_all_fields", "true"));
 	  update_one_field = Boolean.parseBoolean(props.getProperty("update_one_field", "false"));
 	  update_field = props.getProperty("update_field", "");
+
+          inc_field = props.getProperty("inc_field", null);
 
       document_depth = Integer.parseInt(props.getProperty("document_depth", "3"));
       document_width = Integer.parseInt(props.getProperty("document_width", "4"));
@@ -552,18 +556,28 @@ public class MongoDbClient extends DB {
       MongoCollection<Document> collection = database.getCollection(table);
 
       Document query = new Document("_id", key);
-      Document fieldsToSet = new Document();
-      if (update_all_fields) {
-        for (Map.Entry<String, ByteIterator> entry : values.entrySet()) {
-          fieldsToSet.put(entry.getKey(), entry.getValue().toArray());
+      Document update;
+      
+      if (inc_field != null)
+      {
+        Document fieldsToSet = new Document(inc_field, new Integer(1));
+        update = new Document("$inc", fieldsToSet);
+      }
+      else
+      {
+        Document fieldsToSet = new Document();
+        if (update_all_fields) {
+          for (Map.Entry<String, ByteIterator> entry : values.entrySet()) {
+            fieldsToSet.put(entry.getKey(), entry.getValue().toArray());
+          }
         }
+  
+        if (update_one_field) {
+          fieldsToSet.put(update_field, values.entrySet().iterator().next().getValue().toArray());
+        }
+  
+        update = new Document("$set", fieldsToSet);
       }
-
-      if (update_one_field) {
-        fieldsToSet.put(update_field, values.entrySet().iterator().next().getValue().toArray());
-      }
-
-      Document update = new Document("$set", fieldsToSet);
 
       UpdateResult result = collection.updateOne(query, update);
       if (result.wasAcknowledged() && result.getMatchedCount() == 0) {
