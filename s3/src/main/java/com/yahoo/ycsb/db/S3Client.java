@@ -258,7 +258,7 @@ public class S3Client extends DB {
   */
   @Override
   public Status insert(String bucket, String key,
-      HashMap<String, ByteIterator> values) {
+                       Map<String, ByteIterator> values) {
     return writeToStorage(bucket, key, values, true, sse, ssecKey);
   }
   /**
@@ -278,7 +278,7 @@ public class S3Client extends DB {
   */
   @Override
   public Status read(String bucket, String key, Set<String> fields,
-        HashMap<String, ByteIterator> result) {
+                     Map<String, ByteIterator> result) {
     return readFromStorage(bucket, key, result, ssecKey);
   }
   /**
@@ -296,7 +296,7 @@ public class S3Client extends DB {
   */
   @Override
   public Status update(String bucket, String key,
-        HashMap<String, ByteIterator> values) {
+                       Map<String, ByteIterator> values) {
     return writeToStorage(bucket, key, values, false, sse, ssecKey);
   }
   /**
@@ -336,8 +336,8 @@ public class S3Client extends DB {
   *
   */
   protected Status writeToStorage(String bucket, String key,
-        HashMap<String, ByteIterator> values, Boolean updateMarker,
-            String sseLocal, SSECustomerKey ssecLocal) {
+                                  Map<String, ByteIterator> values, Boolean updateMarker,
+                                  String sseLocal, SSECustomerKey ssecLocal) {
     int totalSize = 0;
     int fieldCount = values.size(); //number of fields to concatenate
     // getting the first field in the values
@@ -353,6 +353,7 @@ public class S3Client extends DB {
         int sizeOfFile = (int)objectAndMetadata.getValue().getContentLength();
         fieldCount = sizeOfFile/sizeArray;
         totalSize = sizeOfFile;
+        objectAndMetadata.getKey().close();
       } catch (Exception e){
         System.err.println("Not possible to get the object :"+key);
         e.printStackTrace();
@@ -421,7 +422,7 @@ public class S3Client extends DB {
   *
   */
   protected Status readFromStorage(String bucket, String key,
-        HashMap<String, ByteIterator> result, SSECustomerKey ssecLocal) {
+                                   Map<String, ByteIterator> result, SSECustomerKey ssecLocal) {
     try {
       Map.Entry<S3Object, ObjectMetadata> objectAndMetadata = getS3ObjectAndMetadata(bucket, key, ssecLocal);
       InputStream objectData = objectAndMetadata.getKey().getObjectContent(); //consuming the stream
@@ -431,6 +432,7 @@ public class S3Client extends DB {
       objectData.read(inputStreamToByte, 0, sizeOfFile);
       result.put(key, new ByteArrayByteIterator(inputStreamToByte));
       objectData.close();
+      objectAndMetadata.getKey().close();
     } catch (Exception e){
       System.err.println("Not possible to get the object "+key);
       e.printStackTrace();

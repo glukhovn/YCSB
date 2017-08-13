@@ -289,7 +289,7 @@ public class MongoDbClient extends DB {
    */
   @Override
   public Status insert(String table, String key,
-      HashMap<String, ByteIterator> values) {
+      Map<String, ByteIterator> values) {
     try {
       MongoCollection<Document> collection = database.getCollection(table);
       Document toInsert;
@@ -385,7 +385,7 @@ public class MongoDbClient extends DB {
           }
           bulkInserts.clear();
         } else {
-          return OptionsSupport.BATCHED_OK;
+          return Status.BATCHED_OK;
         }
       }
       return Status.OK;
@@ -414,7 +414,7 @@ public class MongoDbClient extends DB {
    */
   @Override
   public Status read(String table, String key, Set<String> fields,
-      HashMap<String, ByteIterator> result) {
+      Map<String, ByteIterator> result) {
     try {
       MongoCollection<Document> collection = database.getCollection(table);
       Document query;
@@ -547,7 +547,7 @@ public class MongoDbClient extends DB {
    */
   @Override
   public Status update(String table, String key,
-      HashMap<String, ByteIterator> values) {
+      Map<String, ByteIterator> values) {
     try {
       MongoCollection<Document> collection = database.getCollection(table);
 

@@ -15,6 +15,8 @@
 
 package com.yahoo.ycsb.db;
 
+import static com.yahoo.ycsb.workloads.CoreWorkload.TABLENAME_PROPERTY;
+import static com.yahoo.ycsb.workloads.CoreWorkload.TABLENAME_PROPERTY_DEFAULT;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -45,6 +47,7 @@ import org.junit.Test;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Map;
 import java.util.List;
 import java.util.Properties;
 import java.util.Vector;
@@ -59,6 +62,7 @@ public class HBaseClient10Test {
   private static HBaseTestingUtility testingUtil;
   private HBaseClient10 client;
   private Table table = null;
+  private String tableName;
 
   private static boolean isWindows() {
     final String os = System.getProperty("os.name");
@@ -106,7 +110,8 @@ public class HBaseClient10Test {
     final CoreWorkload workload = new CoreWorkload();
     workload.init(p);
 
-    table = testingUtil.createTable(TableName.valueOf(CoreWorkload.table), Bytes.toBytes(COLUMN_FAMILY));
+    tableName = p.getProperty(TABLENAME_PROPERTY, TABLENAME_PROPERTY_DEFAULT);
+    table = testingUtil.createTable(TableName.valueOf(tableName), Bytes.toBytes(COLUMN_FAMILY));
 
     client.setProperties(p);
     client.init();
@@ -115,7 +120,7 @@ public class HBaseClient10Test {
   @After
   public void tearDown() throws Exception {
     table.close();
-    testingUtil.deleteTable(CoreWorkload.table);
+    testingUtil.deleteTable(tableName);
   }
 
   @Test
@@ -129,7 +134,7 @@ public class HBaseClient10Test {
     table.put(p);
 
     final HashMap<String, ByteIterator> result = new HashMap<String, ByteIterator>();
-    final Status status = client.read(CoreWorkload.table, rowKey, null, result);
+    final Status status = client.read(tableName, rowKey, null, result);
     assertEquals(Status.OK, status);
     assertEquals(2, result.size());
     assertEquals("value1", result.get("column1").toString());
@@ -139,7 +144,7 @@ public class HBaseClient10Test {
   @Test
   public void testReadMissingRow() throws Exception {
     final HashMap<String, ByteIterator> result = new HashMap<String, ByteIterator>();
-    final Status status = client.read(CoreWorkload.table, "Missing row", null, result);
+    final Status status = client.read(tableName, "Missing row", null, result);
     assertEquals(Status.NOT_FOUND, status);
     assertEquals(0, result.size());
   }
@@ -165,11 +170,11 @@ public class HBaseClient10Test {
         new Vector<HashMap<String, ByteIterator>>();
 
     // Scan 5 records, skipping the first
-    client.scan(CoreWorkload.table, "00001", 5, null, result);
+    client.scan(tableName, "00001", 5, null, result);
 
     assertEquals(5, result.size());
     for(int i = 0; i < 5; i++) {
-      final HashMap<String, ByteIterator> row = result.get(i);
+      final Map<String, ByteIterator> row = result.get(i);
       assertEquals(1, row.size());
       assertTrue(row.containsKey(colStr));
       final byte[] bytes = row.get(colStr).toArray();
@@ -182,10 +187,10 @@ public class HBaseClient10Test {
   @Test
   public void testUpdate() throws Exception{
     final String key = "key";
-    final HashMap<String, String> input = new HashMap<String, String>();
+    final Map<String, String> input = new HashMap<String, String>();
     input.put("column1", "value1");
     input.put("column2", "value2");
-    final Status status = client.insert(CoreWorkload.table, key, StringByteIterator.getByteIteratorMap(input));
+    final Status status = client.insert(tableName, key, StringByteIterator.getByteIteratorMap(input));
     assertEquals(Status.OK, status);
 
     // Verify result
