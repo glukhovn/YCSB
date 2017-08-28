@@ -377,7 +377,7 @@ public class JdbcDBMysqlJsonClient extends DB implements JdbcDBClientConstants {
 
 	@Override
 	public Status read(String tableName, String key, Set<String> fields,
-			HashMap<String, ByteIterator> result) {
+			Map<String, ByteIterator> result) {
     try {
       StatementType type = new StatementType(StatementType.Type.READ, tableName, 1, getShardIndexByKey(key));
       PreparedStatement readStatement = cachedStatements.get(type);
@@ -435,7 +435,7 @@ public class JdbcDBMysqlJsonClient extends DB implements JdbcDBClientConstants {
 	}
 
 	@Override
-	public Status update(String tableName, String key, HashMap<String, ByteIterator> values) {
+	public Status update(String tableName, String key, Map<String, ByteIterator> values) {
     try {
       int numFields = values.size();
       StatementType type = new StatementType(StatementType.Type.UPDATE, tableName, numFields, getShardIndexByKey(key));
@@ -466,7 +466,7 @@ public class JdbcDBMysqlJsonClient extends DB implements JdbcDBClientConstants {
 	}
 
 	@Override
-	public Status insert(String tableName, String key, HashMap<String, ByteIterator> values) {
+	public Status insert(String tableName, String key, Map<String, ByteIterator> values) {
 	  try {
 	    int numFields = values.size();
 	    StatementType type = new StatementType(StatementType.Type.INSERT, tableName, numFields, getShardIndexByKey(key));
