@@ -2,6 +2,8 @@
 
 YCSB_HOME=$(dirname "$0")
 YCSB_VERSION=0.13.0
+YCSB_STAT_INTERVAL=10
+YCSB_TABLE="usertable"
 
 YCSB_CLASSPATH=
 for lib in ${YCSB_HOME}/jdbc-binding/lib/*.jar
@@ -140,27 +142,32 @@ create_table()
 	esac
 }
 
+run_psql()
+{
+	local url=$(grep 'db.url=' "$cfg")
+	local usr=$(grep 'db.user=' "$cfg")
+
+	url=${url#*//}
+	usr=${usr#db.user=}
+	local db=${url#*/}
+	db=${db%%\?*}
+	url=${url%%/*}
+	local host=${url%:*}
+	local port=${url#*:}
+
+	psql -h "$host" -p "$port" -d "$db" -U "$usr"
+}
+
 checkpoint()
 {
 	local cfg="${YCSB_HOME}/config/"$1".dat"
 
 	case "$1" in
 		jdbc-pg*|pgjsonb-*)
-			local url=$(grep 'db.url=' "$cfg")
-			local usr=$(grep 'db.user=' "$cfg")
-
-			url=${url#*//}
-			usr=${usr#db.user=}
-			local db=${url#*/}
-			db=${db%%\?*}
-			url=${url%%/*}
-			local host=${url%:*}
-			local port=${url#*:}
-
 			{
 				#echo "CHECKPOINT;"
 				echo "VACUUM usertable;"
-			} | psql -h "$host" -p "$port" -d "$db" -U "$usr"
+			} | run_psql "$cfg"
 			;;
 
 		jdbc-mysql*|mysqljson-*)
@@ -172,6 +179,56 @@ checkpoint()
 		*)
 			;;
 	esac
+}
+
+run_sizestat()
+{
+	local cfg="${YCSB_HOME}/config/"$1".dat"
+
+	case "$1" in
+		jdbc-pg*|pgjsonb-*)
+			{
+				echo "\\pset format unaligned"
+				echo "\\pset fieldsep '\\t'"
+				echo "SELECT pg_table_size(oid), pg_indexes_size(oid)
+					FROM pg_class WHERE relname = '$YCSB_TABLE';"
+				echo "\\watch $YCSB_STAT_INTERVAL"
+			} | run_psql "$cfg"
+			;;
+
+		jdbc-mysql*|mysqljson-*)
+			;;
+
+		mongodb-*)
+			;;
+
+		*)
+			;;
+	esac
+}
+
+run_cpustat()
+{
+	test "$YCSB_SSH" && ssh $YCSB_SSH "mpstat $YCSB_STAT_INTERVAL" < /dev/null
+}
+
+run_iostat()
+{
+	test "$YCSB_SSH" && ssh $YCSB_SSH "iostat $YCSB_STAT_INTERVAL -g ALL -x -t" < /dev/null
+}
+
+killtree()
+{
+	local _pid=$1
+	local _sig=${2:--TERM}
+	kill -stop ${_pid} # needed to stop quickly forking parent from producing children between child killing and parent killing
+	for _child in $(ps -o pid --no-headers --ppid ${_pid})
+	do
+		killtree ${_child} ${_sig}
+	done
+	kill ${_sig} ${_pid}
+	kill -cont ${_pid}
+	wait ${_pid} 2>/dev/null || true
 }
 
 run_workload()
@@ -216,12 +273,28 @@ run_workload()
 	props="$props -p operationcount=$operations" #"$(expr $operations \* $clients)"
 
 	local out_dir="results/${date}"
-	local log_file="${out_dir}/${cmd}_${name}${cfg}.log"
-	local out_file="${out_dir}/${cmd}_${name}${cfg}.out"
+	local base_file="${out_dir}/${cmd}_${name}${cfg}"
+	local log_file="${base_file}.log"
+	local out_file="${base_file}.out"
+	local cpu_file="${base_file}_cpu.log"
+	local io_file="${base_file}_io.log"
+	local size_file="${base_file}_size.log"
 
 	mkdir -p "${out_dir}" || return
 	test -L results/last && unlink results/last
 	ln -s "$PWD/${out_dir}" results/last
+
+	local cpustat_pid=
+#	run_cpustat > $cpu_file &
+#	test -z $? && cpustat_pid=$!
+
+	local iostat_pid=
+	run_iostat > $io_file &
+	test $? = 0 && iostat_pid=$!
+
+	local sizestat_pid=
+	#run_sizestat "$db" > $size_file &
+	test $? = 0 && sizestat_pid=$!
 
 	{
 		test "$cmd" != "load" || create_table "$db" $props &&
@@ -232,6 +305,10 @@ run_workload()
 		echo "FAILED, see ${log_file}"
 		return 1
 	}
+
+	#test $cpustat_pid  && { kill $cpustat_pid;  wait $cpustat_pid; }
+	test $iostat_pid   && { killtree $iostat_pid;   wait $iostat_pid; } >/dev/null 2>&1;
+	test $sizestat_pid && { killtree $sizestat_pid; wait $sizestat_pid; } > /dev/null 2>&1;
 
 	test "$cfg" || cfg="_default"
 
