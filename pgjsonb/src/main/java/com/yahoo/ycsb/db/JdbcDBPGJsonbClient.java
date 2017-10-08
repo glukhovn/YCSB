@@ -81,6 +81,8 @@ public class JdbcDBPGJsonbClient extends DB implements JdbcDBClientConstants {
   private static int element_values;
   private static int element_obj;
 
+  private static boolean separate_id;
+
   private Integer jdbcFetchSize;
   private static final String DEFAULT_PROP = "";
   private ConcurrentMap<StatementType, PreparedStatement> cachedStatements;
@@ -222,6 +224,8 @@ public class JdbcDBPGJsonbClient extends DB implements JdbcDBClientConstants {
  		document_width = Integer.parseInt(props.getProperty("document_width", "4"));
  		element_values = Integer.parseInt(props.getProperty("element_values", "2"));
  		element_obj = Integer.parseInt(props.getProperty("element_obj", "2"));
+
+        separate_id = Boolean.parseBoolean(props.getProperty("separate_id", "false"));
 
       String jdbcFetchSizeStr = props.getProperty(JDBC_FETCH_SIZE);
           if (jdbcFetchSizeStr != null) {
