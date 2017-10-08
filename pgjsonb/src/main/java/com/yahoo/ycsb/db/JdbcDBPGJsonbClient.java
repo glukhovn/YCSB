@@ -318,6 +318,10 @@ public class JdbcDBPGJsonbClient extends DB implements JdbcDBClientConstants {
       read.append(readType.tableName);
     }
 
+    if (separate_id) {
+      read.append(" WHERE ycsb_key = ?");
+    }
+
     if (jsonb_path_ops) {
       read.append(" WHERE data @> ?::jsonb");
     }
@@ -448,7 +452,7 @@ public class JdbcDBPGJsonbClient extends DB implements JdbcDBClientConstants {
         readStatement.setString(1, readCondition.toString());
       }
 
-      if (field_index) {
+      if (field_index || separate_id) {
         readStatement.setString(1, key);
       }
 
