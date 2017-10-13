@@ -57,7 +57,8 @@ public class JdbcDBPGJsonbClient extends JdbcJsonClient {
   private static boolean jsonb_path_ops_no_parse;
   private static boolean field_index;
   private static boolean sql_json;
-
+  private static boolean select_for_update;
+   
   /**
    * Initialize the database connection and set it up for sending requests to the database.
    * This must be called once per client.
@@ -76,6 +77,7 @@ public class JdbcDBPGJsonbClient extends JdbcJsonClient {
     jsonb_path_ops_no_parse = Boolean.parseBoolean(props.getProperty("jsonb_path_ops_no_parse", "true"));
     field_index = Boolean.parseBoolean(props.getProperty("field_index", "true"));
     sql_json = Boolean.parseBoolean(props.getProperty("sql_json", "false"));
+    select_for_update = Boolean.parseBoolean(props.getProperty("select_for_update", "false"));
 
     super.init();
 
@@ -94,35 +96,40 @@ public class JdbcDBPGJsonbClient extends JdbcJsonClient {
     return condition.toString();
   }
 
-  private StringBuilder appendWhereClause(StringBuilder builder) {
+  private StringBuilder appendWhereClause(StringBuilder builder, String alias, String param) {
     if (jsonb_path_ops) {
-      builder.append(" WHERE data @> ");
+      builder.append(" WHERE ").append(alias).append("data @> ");
       if (jsonb_path_ops_no_parse)
-        builder.append("jsonb_build_object('").append(PRIMARY_KEY).append("', ?)");
+        builder.append("jsonb_build_object('").append(PRIMARY_KEY).append("', ").append(param).append(")");
       else
-        builder.append("?::jsonb");
+        builder.append(param).append("::jsonb");
     } else if (field_index) {
       if (pk_column)
-        builder.append(" WHERE ").append(PRIMARY_KEY).append(" = ?");
+        builder.append(" WHERE ").append(alias).append(PRIMARY_KEY).append(" = ").append(param);
       else if (sql_json) {
-        builder.append(" WHERE JSON_VALUE(data, '$");
+        builder.append(" WHERE JSON_VALUE(").append(alias).append("data, '$");
 
         for (int i = 1; i < nesting_key_depth; i++)
           builder.append(".").append(PRIMARY_KEY).append(i);
 
-        builder.append(".").append(PRIMARY_KEY).append("' RETURNING text) = ?");
+        builder.append(".").append(PRIMARY_KEY).append("' RETURNING text) = ").append(param);
       } else {
-        builder.append(" WHERE data->>");
+        builder.append(" WHERE ").append(alias).append("data->>");
 
         for (int i = 1; i < nesting_key_depth; i++)
           builder.append("'").append(PRIMARY_KEY).append(i).append("'->>");
 
-        builder.append("'" + PRIMARY_KEY + "'").append(" = ?");
+        builder.append("'" + PRIMARY_KEY + "'").append(" = ").append(param);
       }
     }
 
     return builder;
   }
+
+  private StringBuilder appendWhereClause(StringBuilder builder) {
+    return appendWhereClause(builder, "", "?");
+  }
+
 
   @Override
   protected String createInsertStatement(StatementType insertType) {
@@ -177,6 +184,17 @@ public class JdbcDBPGJsonbClient extends JdbcJsonClient {
 
   @Override
   protected String createUpdateStatement(StatementType updateType) {
+    if (select_for_update)
+    {
+      String sql = appendWhereClause(
+       appendWhereClause(
+       appendKeyField(
+        new StringBuilder("UPDATE ").append(updateType.tableName)
+          .append(" SET data = data || ?::jsonb FROM (SELECT "), PRIMARY_KEY).append(" id FROM ").append(updateType.tableName)).append(" FOR NO KEY UPDATE) q "), "", "q.id").toString();
+      System.err.println(sql);
+      return sql;
+    }
+
     return appendWhereClause(
         new StringBuilder("UPDATE ").append(updateType.tableName)
           .append(" SET data = data || ?::jsonb")).toString();
