@@ -57,6 +57,10 @@ public interface JdbcDBClientConstants {
   /** The name of the property for the number of partitions in the table. */
   public static final String PARTITION_COUNT_PROPERTY = "partitions";
 
+  /** The name of the property for enabling advisory locks. */
+  public static String ADVISORY_LOCKS = "advisorylocks";
+
+
   /** Representing a NULL value. */
   public static final String NULL_VALUE = "NULL";
 

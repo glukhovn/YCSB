@@ -197,8 +197,9 @@ public final class JdbcDBCreateTable {
 
     props = fileprops;
 
-    if (tablename == null)
+    if (tablename == null) {
       tablename = props.getProperty("table");
+    }
 
     if (tablename == null) {
       System.err.println("table name missing.");
@@ -208,11 +209,14 @@ public final class JdbcDBCreateTable {
 
     if (fieldcount < 0) {
       String prop = props.getProperty("fieldcount");
-      if (prop != null)
+      if (prop != null) {
         try {
           fieldcount = Integer.parseInt(prop);
-        } catch (NumberFormatException e) { }
-	}
+        } catch (NumberFormatException e) {
+          fieldcount = -1;
+        }
+      }
+    }
 
     if (fieldcount > 0) {
       props.setProperty(JdbcDBClient.FIELD_COUNT_PROPERTY, String.valueOf(fieldcount));

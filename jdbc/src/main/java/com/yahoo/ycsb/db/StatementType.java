@@ -22,7 +22,8 @@ package com.yahoo.ycsb.db;
 public class StatementType {
 
   enum Type {
-    INSERT(1), DELETE(2), READ(3), UPDATE(4), SCAN(5);
+    INSERT(1), DELETE(2), READ(3), UPDATE(4), SCAN(5),
+    LOCK_SHARED(6), LOCK_EXCLUSIVE(7), UNLOCK_SHARED(8), UNLOCK_EXCLUSIVE(9);
 
     private final int internalType;
 

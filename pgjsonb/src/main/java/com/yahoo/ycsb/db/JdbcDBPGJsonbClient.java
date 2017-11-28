@@ -218,4 +218,31 @@ public class JdbcDBPGJsonbClient extends JdbcJsonClient {
           .append(" LIMIT ?")
           .toString();
   }
+
+  @Override
+  protected String buildLockKey(String key) {
+    return new Integer(key.hashCode()).toString();
+  }
+
+  @Override
+  protected String createLockStatement(StatementType lockType) {
+    String fn;
+    switch (lockType.type) {
+      case LOCK_SHARED:
+        fn = "pg_advisory_lock_shared";
+        break;
+      case UNLOCK_SHARED:
+        fn = "pg_advisory_unlock_shared";
+        break;
+      case LOCK_EXCLUSIVE:
+        fn = "pg_advisory_lock";
+        break;
+      case UNLOCK_EXCLUSIVE:
+        fn = "pg_advisory_unlock";
+        break;
+      default:
+        throw new IllegalArgumentException("invalid advisory lock type");
+    }
+    return (new StringBuilder()).append("SELECT ").append(fn).append("(?::bigint)").toString();
+  }
 }

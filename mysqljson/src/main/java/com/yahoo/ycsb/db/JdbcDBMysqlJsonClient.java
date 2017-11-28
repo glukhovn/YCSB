@@ -56,6 +56,11 @@ public class JdbcDBMysqlJsonClient extends JdbcJsonClient {
   }
 
   @Override
+  public String createLockStatement(StatementType lockType, String key) {
+    throw new RuntimeException("advisory locks are not supported");
+  }
+
+  @Override
   protected String createInsertStatement(StatementType insertType) {
     return new StringBuilder("INSERT INTO ").append(insertType.tableName)
       .append("(data").append(pk_column ? ", " + PRIMARY_KEY : "").append(")")

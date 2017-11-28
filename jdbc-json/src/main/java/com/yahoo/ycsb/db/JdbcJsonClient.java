@@ -95,6 +95,7 @@ public abstract class JdbcJsonClient extends DB implements JdbcDBClientConstants
   private int batchSize;
   private boolean autoCommit;
   private boolean batchUpdates;
+  private boolean advisoryLocks;
   private static final String DEFAULT_PROP = "";
   private ConcurrentMap<StatementType, PreparedStatement> cachedStatements;
   private long numRowsInBatch = 0;
@@ -110,6 +111,10 @@ public abstract class JdbcJsonClient extends DB implements JdbcDBClientConstants
       READ(3),
       UPDATE(4),
       SCAN(5),
+      LOCK_SHARED(6),
+      LOCK_EXCLUSIVE(7),
+      UNLOCK_SHARED(8),
+      UNLOCK_EXCLUSIVE(9)
       ;
       int internalType;
       private Type(int type) {
@@ -273,6 +278,7 @@ public abstract class JdbcJsonClient extends DB implements JdbcDBClientConstants
 
     autoCommit = getBoolProperty(props, JDBC_AUTO_COMMIT, true);
     batchUpdates = getBoolProperty(props, JDBC_BATCH_UPDATES, false);
+    advisoryLocks = getBoolProperty(props, ADVISORY_LOCKS, false);
 
     try {
       if (driver != null) {
@@ -360,6 +366,8 @@ public abstract class JdbcJsonClient extends DB implements JdbcDBClientConstants
 
   protected abstract String createScanStatement(StatementType scanType);
 
+  protected abstract String createLockStatement(StatementType lockType);
+
   protected static void appendJsonKey(StringBuilder json, String key) {
     for (int i = 1; i < nesting_key_depth; i++)
       json.append(String.format("\"%s%d\": {", PRIMARY_KEY, i));
@@ -373,6 +381,10 @@ public abstract class JdbcJsonClient extends DB implements JdbcDBClientConstants
   }
 
   protected String buildScanKey(String key) {
+    return key;
+  }
+
+  protected String buildLockKey(String key) {
     return key;
   }
 
@@ -460,6 +472,21 @@ public abstract class JdbcJsonClient extends DB implements JdbcDBClientConstants
     return json.append("}").toString();
   }
 
+  private PreparedStatement getLockStatement(String tableName, String key, StatementType.Type lockType) throws SQLException {
+      if (!this.advisoryLocks)
+        return null;
+
+      StatementType type = new StatementType(lockType, tableName, 1, getShardIndexByKey(key), null);
+      PreparedStatement lockStatement = cachedStatements.get(type);
+
+      if (lockStatement == null)
+        lockStatement = createAndCacheStatement(type, key, createLockStatement(type));
+
+      lockStatement.setString(1, buildLockKey(key));
+
+      return lockStatement;
+  }
+
   @Override
   public Status read(String tableName, String key, Set<String> fields, HashMap<String, ByteIterator> result) {
     try {
@@ -467,26 +494,38 @@ public abstract class JdbcJsonClient extends DB implements JdbcDBClientConstants
       PreparedStatement readStatement = cachedStatements.get(type);
       if (readStatement == null)
         readStatement = createAndCacheStatement(type, key, createReadStatement(type));
+      
+      PreparedStatement lockStatement =
+        getLockStatement(tableName, key, StatementType.Type.LOCK_SHARED);
+      PreparedStatement unlockStatement =
+        getLockStatement(tableName, key, StatementType.Type.UNLOCK_SHARED);
+
+      if (lockStatement != null)
+        lockStatement.execute();
 
       readStatement.setString(1, buildConditionKey(key));
 
       ResultSet resultSet = readStatement.executeQuery();
 
-      if (!resultSet.next()) {
-        resultSet.close();
-        return Status.NOT_FOUND;
-      }
+      Status status = Status.NOT_FOUND;
 
-      if (result != null && fields != null) {
-        for (String field : fields) {
-          String value = resultSet.getString(field);
-          result.put(field, new StringByteIterator(value));
+      if (resultSet.next()) {
+        status = Status.OK;
+
+        if (result != null && fields != null) {
+          for (String field : fields) {
+            String value = resultSet.getString(field);
+            result.put(field, new StringByteIterator(value));
+          }
         }
       }
 
       resultSet.close();
 
-      return Status.OK;
+      if (unlockStatement != null)
+        unlockStatement.execute();
+
+      return status;
     } catch (SQLException e) {
         System.err.println("Error in processing read of table " + tableName + ": "+e);
       return Status.ERROR;
@@ -536,6 +575,14 @@ public abstract class JdbcJsonClient extends DB implements JdbcDBClientConstants
       if (updateStatement == null)
         updateStatement = createAndCacheStatement(type, key, createUpdateStatement(type));
 
+      PreparedStatement lockStatement =
+        getLockStatement(tableName, key, StatementType.Type.LOCK_EXCLUSIVE);
+      PreparedStatement unlockStatement =
+        getLockStatement(tableName, key, StatementType.Type.UNLOCK_EXCLUSIVE);
+
+      if (lockStatement != null)
+        lockStatement.execute();
+
       int index = 1;
 
       for (String val : buildUpdateValues(values))
@@ -544,6 +591,10 @@ public abstract class JdbcJsonClient extends DB implements JdbcDBClientConstants
       updateStatement.setString(index, buildConditionKey(key));
 
       int result = updateStatement.executeUpdate();
+
+      if (unlockStatement != null)
+        unlockStatement.execute();
+
       return result == 1 || result == 2 ? Status.OK : Status.UNEXPECTED_STATE;
     } catch (SQLException e) {
       System.err.println("Error in processing update to table: " + tableName + e);
@@ -559,6 +610,11 @@ public abstract class JdbcJsonClient extends DB implements JdbcDBClientConstants
       PreparedStatement insertStatement = cachedStatements.get(type);
       if (insertStatement == null)
         insertStatement = createAndCacheStatement(type, key, createInsertStatement(type));
+
+      PreparedStatement lockStatement =
+        getLockStatement(tableName, key, StatementType.Type.LOCK_EXCLUSIVE);
+      PreparedStatement unlockStatement =
+        getLockStatement(tableName, key, StatementType.Type.UNLOCK_EXCLUSIVE);
 
       insertStatement.setString(1, buildInsertValue(key, values));
       if (pk_column)
@@ -624,9 +680,21 @@ public abstract class JdbcJsonClient extends DB implements JdbcDBClientConstants
       if (deleteStatement == null)
         deleteStatement = createAndCacheStatement(type, key, createDeleteStatement(type));
 
+      PreparedStatement lockStatement =
+        getLockStatement(tableName, key, StatementType.Type.LOCK_EXCLUSIVE);
+      PreparedStatement unlockStatement =
+        getLockStatement(tableName, key, StatementType.Type.UNLOCK_EXCLUSIVE);
+
+      if (lockStatement != null)
+        lockStatement.execute();
+
       deleteStatement.setString(1, buildConditionKey(key));
 
       int result = deleteStatement.executeUpdate();
+
+      if (unlockStatement != null)
+        unlockStatement.execute();
+
       return result == 1 ? Status.OK : Status.UNEXPECTED_STATE;
     } catch (SQLException e) {
       System.err.println("Error in processing delete to table: " + tableName + e);
