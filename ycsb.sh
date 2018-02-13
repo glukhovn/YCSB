@@ -37,7 +37,7 @@ extract_results()
 {
 	while read tag counter val
 	do
-		test "${tag:0:1}" = "[" &&	
+		test "${tag:0:1}" = "[" &&
 		case "$tag $counter" in
 			"[OVERALL], RunTime(ms),")				runtime=$val;;
 			"[OVERALL], Throughput(ops/sec),")		throughput=$val;;
@@ -48,7 +48,14 @@ extract_results()
 			"[READ], MaxLatency(us),")				r_lat_max=$val;;
 			"[READ], 95thPercentileLatency(us),")	r_lat_95=$val;;
 			"[READ], 99thPercentileLatency(us),")	r_lat_99=$val;;
-			
+
+			"[SCAN], Operations,")					s_ops=$val;;
+			"[SCAN], AverageLatency(us),")			s_lat_avg=$val;;
+			"[SCAN], MinLatency(us),")				s_lat_min=$val;;
+			"[SCAN], MaxLatency(us),")				s_lat_max=$val;;
+			"[SCAN], 95thPercentileLatency(us),")	s_lat_95=$val;;
+			"[SCAN], 99thPercentileLatency(us),")	s_lat_99=$val;;
+
 			"[UPDATE], Operations,")				u_ops=$val;;
 			"[UPDATE], AverageLatency(us),")		u_lat_avg=$val;;
 			"[UPDATE], MinLatency(us),")			u_lat_min=$val;;
@@ -66,6 +73,7 @@ extract_results()
 	done < "$1"
 
 	r_stats="$r_ops	$r_lat_avg	$r_lat_min	$r_lat_max	$r_lat_95	$r_lat_99"
+	s_stats="$s_ops	$s_lat_avg	$s_lat_min	$s_lat_max	$s_lat_95	$s_lat_99"
 	u_stats="$u_ops	$u_lat_avg	$u_lat_min	$u_lat_max	$u_lat_95	$u_lat_99"
 	i_stats="$i_ops	$i_lat_avg	$i_lat_min	$i_lat_max	$i_lat_95	$i_lat_99"
 
@@ -73,6 +81,9 @@ extract_results()
 	then
 		echo "$runtime	$throughput	${i_stats}"
 	else
+		test "$s_ops" && r_stats=$s_stats
+		test "$i_ops" && u_stats=$i_stats
+
 		echo "$runtime	$throughput	${r_stats}	${u_stats}"
 	fi
 
@@ -105,10 +116,11 @@ write_results()
 
 extract_results_dir()
 {
-	for f in $(ls  "$1"/run_*.out)
+	for f in $(ls -v1 "$1"/*.out)
 	do
-		local res=$(extract_results "$f" "$2")
 		IFS="_" read cmd db workload clients cfg <<< "$(basename "${f%.*}")"
+		local res=$(extract_results "$f" "$cmd")
+		test "$cmd" = "load" && workload="load_$workload"
 		write_results $db $workload $cfg $clients "$res"
 	done
 }
