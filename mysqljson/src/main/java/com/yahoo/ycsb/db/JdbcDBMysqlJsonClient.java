@@ -56,7 +56,7 @@ public class JdbcDBMysqlJsonClient extends JdbcJsonClient {
   }
 
   @Override
-  public String createLockStatement(StatementType lockType, String key) {
+  public String createLockStatement(StatementType lockType) {
     throw new RuntimeException("advisory locks are not supported");
   }
 
