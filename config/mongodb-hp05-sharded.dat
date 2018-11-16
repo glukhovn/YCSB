@@ -1,0 +1,15 @@
+#mongodbu.url=mongodb%3A%2F%2Fycsb%3AIsMFXAwGt3I%40192.168.0.54%3A27001%2Fycsb%3Fw%3D1%26j%3Dfalse%2Cmongodb%3A%2F%2Fycsb%3AIsMFXAwGt3I%40192.168.0.54%3A27002%2Fycsb%3Fw%3D1%26j%3Dfalse%2Cmongodb%3A%2F%2Fycsb%3AIsMFXAwGt3I%40192.168.0.54%3A27003%2Fycsb%3Fw%3D1%26j%3Dfalse%2Cmongodb%3A%2F%2Fycsb%3AIsMFXAwGt3I%40192.168.0.54%3A27004%2Fycsb%3Fw%3D1%26j%3Dfalse
+
+#mongodb.url=mongodb://192.168.0.54:27001/ycsb?w=1&j=false,mongodb://192.168.0.54:27002/ycsb?w=1&j=false,mongodb://192.168.0.54:27003/ycsb?w=1&j=false,mongodb://192.168.0.54:27004/ycsb?w=1&j=false
+mongodb.user=ycsb
+mongodb.password=IsMFXAwGt3I
+mongodb.url=mongodb://ycsb:IsMFXAwGt3I@192.168.0.54:27001/ycsb?w=1&j=false,mongodb://ycsb:IsMFXAwGt3I@192.168.0.54:27002/ycsb?w=1&j=false,mongodb://ycsb:IsMFXAwGt3I@192.168.0.54:27003/ycsb?w=1&j=false,mongodb://ycsb:IsMFXAwGt3I@192.168.0.54:27004/ycsb?w=1&j=false
+#ongodb.batchsize=100
+mongodb.maxconnections=1024
+#mongodb.threadsAllowedToBlockForConnectionMultiplier=100
+#connectionsPerHost=300
+#threadsAllowedToBlockForConnectionMultiplier=100
+batchSize=100
+db.batchsize=100
+
+maxPoolSize=1024

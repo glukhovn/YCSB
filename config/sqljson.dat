@@ -1,0 +1,3 @@
+sql_json=true
+readallfields=false
+writeallfields=false

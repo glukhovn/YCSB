@@ -1,0 +1,8 @@
+db.driver=com.mysql.jdbc.Driver
+db.url=jdbc:mysql://dbtest.sai.msu.ru/ycsb
+db.user=ycsb
+db.passwd=ycsb
+db.batchsize=1000
+#jdbc.autocommit=false
+jdbc.batchupdateapi=true
+table=usertable

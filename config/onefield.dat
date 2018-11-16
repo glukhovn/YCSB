@@ -1,0 +1,10 @@
+readallfields=false
+writeallfields=false
+
+#select_all_fields=false
+#select_one_field=true
+#select_field_path='field5'
+
+#update_all_fields=false
+#update_one_field=true
+#update_field=field5

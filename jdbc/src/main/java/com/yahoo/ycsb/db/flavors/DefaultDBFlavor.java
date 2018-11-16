@@ -95,4 +95,9 @@ public class DefaultDBFlavor extends DBFlavor {
     select.append(" LIMIT ?");
     return select.toString();
   }
+
+  @Override
+  public String createLockStatement(StatementType lockType, String key) {
+    throw new RuntimeException("advisory locks are not supported");
+  }
 }

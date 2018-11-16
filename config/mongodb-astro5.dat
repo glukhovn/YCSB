@@ -1,0 +1,6 @@
+mongodb.url=mongodb://ycsb:ycsb_password@158.250.29.5:27017/ycsb?w=1&j=false
+mongodb.batchsize=100
+batchSize=100
+db.batchsize=100
+
+maxPoolSize=160

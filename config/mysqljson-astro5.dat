@@ -1,0 +1,9 @@
+db.driver=com.mysql.jdbc.Driver
+db.url=jdbc:mysql://158.250.29.5/ycsb?useSSL=false&useJDBCCompliantTimezoneShift=true&useLegacyDatetimeCode=false&serverTimezone=Europe/Moscow&cachePrepStmts=true&useServerPrepStmts=true
+db.user=ycsb
+db.passwd=ycsb_password
+db.batchsize=100
+db.rewriteBatchedStatements=true
+#jdbc.autocommit=false
+jdbc.batchupdateapi=true
+table=usertable

@@ -133,6 +133,8 @@ LICENSE file.
     <module>hypertable</module>
     <module>infinispan</module>
     <module>jdbc</module>
+    <module>pgjsonb</module>
+    <module>mysqljson</module>
     <module>kudu</module>
     <!--<module>mapkeeper</module>-->
     <module>memcached</module>
@@ -148,6 +150,7 @@ LICENSE file.
     <module>solr6</module>
     <module>tarantool</module>
     <!--<module>voldemort</module>-->
+    <module>jdbc-json</module>
   </modules>
 
   <build>

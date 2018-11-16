@@ -66,4 +66,10 @@ public abstract class DBFlavor {
    * Create and return a SQL statement for scanning data.
    */
   public abstract String createScanStatement(StatementType scanType, String key);
+
+  /**
+   * Create and return a SQL statement for explicit row locking.
+   */
+  public abstract String createLockStatement(StatementType scanType, String key);
+
 }

@@ -1,0 +1,6 @@
+db.driver=org.postgresql.Driver
+db.url=jdbc:postgresql://dbtest.sai.msu.ru:5432/ycsb
+db.user=ycsb
+db.passwd=ycsb
+jdbc.batchupdateapi=true
+table=usertable

@@ -1,0 +1,10 @@
+mongodb.url=mongodb://ycsb:IsMFXAwGt3I@46.253.126.149:27017/ycsb?w=1&j=false
+#ongodb.batchsize=100
+mongodb.maxconnections=1024
+#mongodb.threadsAllowedToBlockForConnectionMultiplier=100
+#connectionsPerHost=300
+#threadsAllowedToBlockForConnectionMultiplier=100
+#batchSize=100
+#db.batchsize=100
+
+maxPoolSize=1024

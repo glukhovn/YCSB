@@ -109,6 +109,28 @@ public class MongoDbClient extends DB {
   /** The bulk inserts pending for the thread. */
   private final List<Document> bulkInserts = new ArrayList<Document>();
 
+  /**  */
+  private static boolean flat;
+  private static boolean nested;
+  private static int nestingDepth;
+  private static String NESTED_KEY = "yscb_key";
+  private static String COLUMN_PREFIX = "field";
+
+  private static boolean select_all_fields;
+  private static boolean select_one_field;
+  private static String[] select_field_path;
+
+  private static boolean update_one_field;
+  private static boolean update_all_fields;
+  private static String update_field;
+
+  private static String inc_field;
+
+  private static int document_depth;
+  private static int document_width;
+  private static int element_values;
+  private static int element_obj;
+
   /**
    * Cleanup any state for this DB. Called once per DB instance; there is one DB
    * instance per client thread.
@@ -757,6 +779,25 @@ public class MongoDbClient extends DB {
 
       Properties props = getProperties();
 
+      flat = Boolean.parseBoolean(props.getProperty("flat", "true"));
+      nested = Boolean.parseBoolean(props.getProperty("nested", "false"));
+      nestingDepth = Integer.parseInt(props.getProperty("depth", "10"));
+
+	  select_all_fields = Boolean.parseBoolean(props.getProperty("select_all_fields", "true"));
+	  select_one_field = Boolean.parseBoolean(props.getProperty("select_one_field", "false"));
+	  select_field_path = props.getProperty("select_field_path", "").split(",");
+
+	  update_all_fields = Boolean.parseBoolean(props.getProperty("update_all_fields", "true"));
+	  update_one_field = Boolean.parseBoolean(props.getProperty("update_one_field", "false"));
+	  update_field = props.getProperty("update_field", "");
+
+          inc_field = props.getProperty("inc_field", null);
+
+      document_depth = Integer.parseInt(props.getProperty("document_depth", "3"));
+      document_width = Integer.parseInt(props.getProperty("document_width", "4"));
+      element_values = Integer.parseInt(props.getProperty("element_values", "2"));
+      element_obj = Integer.parseInt(props.getProperty("element_obj", "2"));
+
       // Set insert batchsize, default 1 - to be YCSB-original equivalent
       batchSize = Integer.parseInt(props.getProperty("batchsize", "1"));
 
@@ -836,9 +877,70 @@ public class MongoDbClient extends DB {
       HashMap<String, ByteIterator> values) {
     try {
       MongoCollection<Document> collection = database.getCollection(table);
-      Document toInsert = new Document("_id", key);
-      for (Map.Entry<String, ByteIterator> entry : values.entrySet()) {
-        toInsert.put(entry.getKey(), entry.getValue().toArray());
+      Document toInsert;
+
+      if (nested) {
+        toInsert = new Document("ycsb_key", key);
+        for (int i = 1; i < nestingDepth; i++) {
+          toInsert = new Document("ycsb_key" + i, toInsert);
+        }
+      }
+      else {
+        toInsert = new Document("_id", key);
+      }
+
+      int depth = 0;
+      int index = 2;
+
+      if (document_depth == 0) {
+        for (Map.Entry<String, ByteIterator> entry : values.entrySet()) {
+          toInsert.put(entry.getKey(), entry.getValue().toArray());
+        }
+      }
+      else {
+        ArrayList<Document> obj_keys = new ArrayList<Document>();
+        ArrayList<Document> top_keys = obj_keys;
+        ArrayList<Document> current_keys;
+        LinkedList<ByteIterator> val_list = new LinkedList<ByteIterator>(values.values());
+        for(int i = 0; i < document_width; i++) {
+          obj_keys.add(new Document());
+        }
+
+        while (depth < document_depth) {
+          current_keys = new ArrayList<Document>();
+          for(Document obj : obj_keys) {
+
+            // put values
+            for(int i = 0; i < element_values; i++) {
+              obj.put(String.format("%s%d", COLUMN_PREFIX, index), val_list.pop().toArray());
+              index++;
+            }
+
+            if (depth < document_depth - 1) {
+              // put objects
+              for(int i = 0; i < element_obj; i++) {
+                Document child = new Document();
+                obj.put(String.format("%s%d", COLUMN_PREFIX, index), child);
+                current_keys.add(child);
+                index++;
+              }
+            }
+            else {
+              // put values
+              for(int i = 0; i < element_obj; i++) {
+                obj.put(String.format("%s%d", COLUMN_PREFIX, index), val_list.pop().toArray());
+                index++;
+              }
+            }
+          }
+
+          obj_keys = current_keys;
+          depth++;
+        }
+
+        for(Document obj : top_keys) {
+          toInsert.put(String.format("%s%d", COLUMN_PREFIX, index++), obj);
+        }
       }
 
       if (batchSize == 1) {
@@ -900,14 +1002,35 @@ public class MongoDbClient extends DB {
       HashMap<String, ByteIterator> result) {
     try {
       MongoCollection<Document> collection = database.getCollection(table);
-      Document query = new Document("_id", key);
+      Document query;
+
+      if (nested) {
+        StringBuilder path = new StringBuilder("");
+        for (int i = nestingDepth; i > 0; i++) {
+            path.append(String.format("ycsb_key%d.", i));
+        }
+        path.append("ycsb_key");
+
+        query = new Document(path.toString(), key);
+      }
+      else {
+        query = new Document("_id", key);
+      }
 
       FindIterable<Document> findIterable = collection.find(query);
-      if (fields != null) {
-        Document projection = new Document();
+      Document projection = new Document();
+
+      if (fields != null && select_all_fields) {
         for (String field : fields) {
           projection.put(field, INCLUDE);
         }
+        findIterable.projection(projection);
+      }
+
+      if (select_one_field) {
+	    for(String field : select_field_path) {
+          projection.put(field, INCLUDE);
+	    }
         findIterable.projection(projection);
       }
 
@@ -1016,11 +1139,28 @@ public class MongoDbClient extends DB {
       MongoCollection<Document> collection = database.getCollection(table);
 
       Document query = new Document("_id", key);
-      Document fieldsToSet = new Document();
-      for (Map.Entry<String, ByteIterator> entry : values.entrySet()) {
-        fieldsToSet.put(entry.getKey(), entry.getValue().toArray());
+      Document update;
+      
+      if (inc_field != null)
+      {
+        Document fieldsToSet = new Document(inc_field, new Integer(1));
+        update = new Document("$inc", fieldsToSet);
       }
-      Document update = new Document("$set", fieldsToSet);
+      else
+      {
+        Document fieldsToSet = new Document();
+        if (update_all_fields) {
+          for (Map.Entry<String, ByteIterator> entry : values.entrySet()) {
+            fieldsToSet.put(entry.getKey(), entry.getValue().toArray());
+          }
+        }
+  
+        if (update_one_field) {
+          fieldsToSet.put(update_field, values.entrySet().iterator().next().getValue().toArray());
+        }
+  
+        update = new Document("$set", fieldsToSet);
+      }
 
       UpdateResult result = collection.updateOne(query, update);
       if (result.wasAcknowledged() && result.getMatchedCount() == 0) {

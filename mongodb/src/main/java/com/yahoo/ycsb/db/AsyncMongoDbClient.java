@@ -49,7 +49,9 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 import java.util.Vector;
+import java.util.LinkedList;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.Future;
 
 /**
  * MongoDB asynchronous client for YCSB framework using the <a
@@ -107,6 +109,9 @@ public class AsyncMongoDbClient extends DB {
 
   /** The number of writes in the batchedWrite. */
   private int batchedWriteCount = 0;
+
+  private int batchedReadCount = 0;
+  private LinkedList<Future<Document>> batchedReads = new LinkedList<>();
 
   /**
    * Cleanup any state for this DB. Called once per DB instance; there is one DB
@@ -362,6 +367,58 @@ public class AsyncMongoDbClient extends DB {
         fillMap(result, queryResult);
       }
       return queryResult != null ? Status.OK : Status.NOT_FOUND;
+    } catch (final Exception e) {
+      System.err.println(e.toString());
+      return Status.ERROR;
+    }
+
+  }
+
+  //@Override
+  public final Status readAsync(final String table, final String key,
+      final Set<String> fields, final HashMap<String, ByteIterator> result) {
+    try {
+      final MongoCollection collection = database.getCollection(table);
+      final DocumentBuilder query =
+          DOCUMENT_BUILDER.get().reset().add("_id", key);
+
+      final Future<Document> futureResult;
+
+      if (fields != null) {
+        final DocumentBuilder fieldsToReturn = BuilderFactory.start();
+        final Iterator<String> iter = fields.iterator();
+        while (iter.hasNext()) {
+          fieldsToReturn.add(iter.next(), 1);
+        }
+
+        final Find.Builder fb = new Find.Builder(query);
+        fb.projection(fieldsToReturn);
+        fb.setLimit(1);
+        fb.setBatchSize(1);
+        fb.readPreference(readPreference);
+
+        futureResult = collection.findOneAsync(fb.build());
+      } else {
+        futureResult = collection.findOneAsync(query);
+      }
+
+      batchedReadCount++;
+      batchedReads.add(futureResult);
+
+      if (batchedReadCount < batchSize)
+        return Status.BATCHED_OK;
+
+      for (Future<Document> fut : batchedReads) {
+        final Document queryResult = fut.get();
+
+        if (queryResult != null)
+          fillMap(result, queryResult);
+      }
+
+      batchedReads.clear();
+      batchedReadCount = 0;
+
+      return Status.OK;
     } catch (final Exception e) {
       System.err.println(e.toString());
       return Status.ERROR;

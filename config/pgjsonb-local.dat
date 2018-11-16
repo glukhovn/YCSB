@@ -1,0 +1,7 @@
+db.driver=org.postgresql.Driver
+db.url=jdbc:postgresql://localhost:5432/ycsb
+db.user=ycsb
+db.passwd=ycsb
+db.batchsize=100
+jdbc.batchupdateapi=true
+table=usertable

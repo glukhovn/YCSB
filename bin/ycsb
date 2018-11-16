@@ -76,6 +76,8 @@ DATABASES = {
     "infinispan-cs": "com.yahoo.ycsb.db.InfinispanRemoteClient",
     "infinispan"   : "com.yahoo.ycsb.db.InfinispanClient",
     "jdbc"         : "com.yahoo.ycsb.db.JdbcDBClient",
+    "pgjsonb"      : "com.yahoo.ycsb.db.JdbcDBPGJsonbClient",
+    "mysqljson"    : "com.yahoo.ycsb.db.JdbcDBMysqlJsonClient",
     "kudu"         : "com.yahoo.ycsb.db.KuduYCSBClient",
     "mapkeeper"    : "com.yahoo.ycsb.db.MapKeeperClient",
     "memcached"    : "com.yahoo.ycsb.db.MemcachedClient",
@@ -215,7 +217,7 @@ def get_classpath_from_maven(module):
               "Maven follows, try running "
               "'mvn -DskipTests package dependency:build=classpath' on your "
               "own and correct errors." + os.linesep + os.linesep + "mvn output:" + os.linesep
-              + err.output)
+              + err.output or "")
         sys.exit(err.returncode)
 
 def main():

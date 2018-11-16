@@ -82,6 +82,8 @@ public class JdbcDBClient extends DB {
   /** The field name prefix in the table. */
   public static final String COLUMN_PREFIX = "FIELD";
 
+  public static final String ADVISORY_LOCKS = "advisorylocks";
+
   private ArrayList<Connection> conns;
   private boolean initialized = false;
   private Properties props;
@@ -89,6 +91,7 @@ public class JdbcDBClient extends DB {
   private int batchSize;
   private boolean autoCommit;
   private boolean batchUpdates;
+  private boolean advisoryLocks;
   private static final String DEFAULT_PROP = "";
   private ConcurrentMap<StatementType, PreparedStatement> cachedStatements;
   private long numRowsInBatch = 0;
@@ -188,6 +191,7 @@ public class JdbcDBClient extends DB {
 
     this.autoCommit = getBoolProperty(props, JDBC_AUTO_COMMIT, true);
     this.batchUpdates = getBoolProperty(props, JDBC_BATCH_UPDATES, false);
+    this.advisoryLocks = getBoolProperty(props, ADVISORY_LOCKS, false);
 
     try {
       if (driver != null) {
@@ -307,6 +311,17 @@ public class JdbcDBClient extends DB {
     PreparedStatement stmt = cachedStatements.putIfAbsent(scanType, scanStatement);
     if (stmt == null) {
       return scanStatement;
+    }
+    return stmt;
+  }
+
+  private PreparedStatement createAndCacheLockStatement(StatementType lockType, String key)
+      throws SQLException {
+    String lock = dbFlavor.createLockStatement(lockType, key);
+    PreparedStatement lockStatement = getShardConnectionByKey(key).prepareStatement(lock);
+    PreparedStatement stmt = cachedStatements.putIfAbsent(lockType, lockStatement);
+    if (stmt == null) {
+      return lockStatement;
     }
     return stmt;
   }
