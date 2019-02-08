@@ -151,7 +151,12 @@ public class JdbcDBPGJsonbClient extends JdbcJsonClient {
         for (String field : type.fields) {
           if (index++ > 0)
             read.append(", ");
-          appendKeyField(read, field).append(" AS \"").append(field).append('"');
+          if (field == null) {
+            read.append("data");
+            field = "_data_";
+          } else
+            appendKeyField(read, field);
+          read.append(" AS \"").append(field).append('"');
         }
       }
     }
@@ -207,16 +212,53 @@ public class JdbcDBPGJsonbClient extends JdbcJsonClient {
       return builder.append("data->>'").append(key).append("'");
   }
 
+  protected StringBuilder appendPrimaryKey(StringBuilder builder) {
+    if (pk_column)
+      return builder.append(PRIMARY_KEY);
+    else
+      return appendKeyField(builder, PRIMARY_KEY);
+  }
+
+  @Override
+  protected StringBuilder appendPath(StringBuilder builder, String alias, String[] path) {
+    if (path == null) {
+      return appendPrimaryKey(builder);
+    } else if (sql_json) {
+      builder.append("JSON_VALUE(").append(alias).append("data, '$");
+
+      for (int i = 0; i < path.length; i++)
+        builder.append(".").append(path[i]);
+
+      return builder.append("' RETURNING text)");
+    } else {
+      builder.append(alias).append("data");
+
+      for (int i = 0; i < path.length; i++)
+        builder.append("->>'").append(path[i]).append("'");
+
+      return builder;
+    }
+  }
+
   @Override
   protected String createScanStatement(StatementType scanType) {
-    String key = pk_column ? PRIMARY_KEY
-                           : appendKeyField(new StringBuilder(), PRIMARY_KEY).toString();
+    StringBuilder builder = createSelectStatement(scanType);
 
-    return createSelectStatement(scanType)
-          .append(" WHERE ").append(key).append(" >= ?")
-          .append(" ORDER BY ").append(key)
-          .append(" LIMIT ?")
-          .toString();
+    if (scanType.pred != null)
+      appendPred(builder.append(" WHERE "), scanType.pred);
+
+    if (scanType.sort != null) {
+      builder.append(" ORDER BY ");
+
+      for (int i = 0; i < scanType.sort.length; i++) {
+         if (i > 0)
+           builder.append(", ");
+         appendPath(builder, "", scanType.sort[i].path)
+          .append(scanType.sort[i].asc ? " ASC" : " DESC");
+       }
+     }
+
+     return builder.append(" LIMIT ? OFFSET ?").toString();
   }
 
   @Override
@@ -244,5 +286,16 @@ public class JdbcDBPGJsonbClient extends JdbcJsonClient {
         throw new IllegalArgumentException("invalid advisory lock type");
     }
     return (new StringBuilder()).append("SELECT ").append(fn).append("(?::bigint)").toString();
+  }
+
+  @Override
+  protected StringBuilder appendPred(StringBuilder builder, Predicate pred) {
+    switch (pred.type) {
+      case PATH_ARR_EQ:
+        return appendPathCond(builder, pred.getPath(), "@>");
+        //return appendPath(builder, "", pred.getPath()).append(" @> ?");
+      default:
+        return super.appendPred(builder, pred);
+    }
   }
 }

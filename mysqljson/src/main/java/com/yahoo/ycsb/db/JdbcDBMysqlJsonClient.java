@@ -160,9 +160,10 @@ public class JdbcDBMysqlJsonClient extends JdbcJsonClient {
   protected String createScanStatement(StatementType scanType) {
     return createSelectStatement(scanType)
         //.append(" WHERE data->>'$.").append(PRIMARY_KEY).append("' >= ?")
-        //.append(" ORDER BY data->>'$.").append(PRIMARY_KEY).append("' LIMIT ?")
+        //.append(" ORDER BY data->>'$.").append(PRIMARY_KEY).append("'")
         .append(" WHERE ").append(PRIMARY_KEY).append(" >= ?")
-        .append(" ORDER BY ").append(PRIMARY_KEY).append(" LIMIT ?")
+        .append(" ORDER BY ").append(PRIMARY_KEY)
+        .append(" LIMIT ? OFFSET ?")
         .toString();
   }
 }
