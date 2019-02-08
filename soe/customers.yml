@@ -1,0 +1,278 @@
+name: AdvJSON
+type: object
+key: _id
+data:
+  fixed: 10000
+properties:
+  _id:
+    type: string
+    data:
+      post_build: "return 'customer:::' + this.doc_id;"
+  doc_id:
+    type: integer
+    description: The document id
+    data:
+      build: "return document_index + 1"
+  gid:
+    type:
+    description: "guid"
+    data:
+        build: "return chance.guid();"
+  first_name:
+    type: string
+    description: "First name - string, linked to url as the personal page"
+    data:
+      fake: "{{name.firstName}}"
+  middle_name:
+    type: string
+    description: "Middle name - string"
+    data:
+      build: "return chance.bool() ? chance.name({middle: true}).split(' ')[1] : null;"
+  last_name:
+    type: string
+    description: "Last name - string"
+    data:
+      fake: "{{name.lastName}}"
+  ballance_current:
+    type: string
+    description: "currency"
+    data:
+      build: "return chance.dollar();"
+  dob:
+    type: string
+    description: "Date"
+    data:
+      build: "return chance.bool() ? new Date(faker.date.past()).toISOString().split('T')[0] : null;"
+  email:
+    type: string
+    description: "email"
+    data:
+      fake: "{{internet.email}}"
+  isActive:
+    type: boolean
+    description: "active boolean"
+    data:
+      build: "return chance.bool();"
+  linear_score:
+    type: integer
+    description: "integer 0 - 100"
+    data:
+      build: "return chance.integer({min: 0, max: 100});"
+  weighted_score:
+    type: integer
+    description: "integer 0 - 100 with zipf distribution"
+    data:
+      build: "return chance.weighted([0, 1, 2, 3, 4, 5, 6, 7, 8, 9], [1, 0.4, 0.3, 0.25, 0.2, 0.17, 0.13, 0.11, 0.1, 0.09]) * 10 + chance.integer({min: 0, max: 10});"
+  phone_country:
+    type: string
+    description: "field linked to phone, choices: us, uk, fr"
+    data:
+      build: "return  chance.pickone(['us', 'uk', 'fr']);"
+  phone_by_country:
+    type: string
+    description: "phone number by country code, linked to phone_country field"
+    data:
+      post_build: "return chance.phone({country: this.phone_country});"
+  age_group:
+    type: string
+    description: "field linked to age, choices: child, teen, adult, senior"
+    data:
+      build: "return  chance.pickone(['child', 'teen', 'adult', 'senior']);"
+  age_by_group:
+    type: integer
+    description: "age by group, linked to age_group field"
+    data:
+      post_build: "return chance.age({type: this.age_group});"
+  url_protocol:
+    type: string
+    description: "lined to url"
+    data:
+      build: "return  chance.pickone(['http', 'https']);"
+  url_site:
+    type: string
+    description: "lined to url"
+    data:
+      build: "return  chance.pickone(['twitter', 'facebook', 'flixter', 'instagram', 'last', 'linkedin', 'xing', 'google', 'snapchat', 'tumblr', 'pinterest', 'youtube', 'vine', 'whatsapp']);"
+  url_domain:
+    type: string
+    description: "lined to url"
+    data:
+      build: "return  chance.pickone(['com', 'org', 'net', 'int', 'edu', 'gov', 'mil', 'us', 'uk', 'ft', 'it', 'de']);"
+  url:
+    type: string
+    description: "user profile url, linked to other document fields"
+    data:
+      post_build: "return '' + this.url_protocol + '://www.' + this.url_site + '.' + this.url_domain + '/' + this.first_name;"
+  devices:
+    type: array
+    description: "Array of strings - device"
+    items:
+      $ref: '#/definitions/Device'
+      data:
+        min: 2
+        max: 6
+  linked_devices:
+    type: array
+    description: "Array of array of string"
+    items:
+      $ref: '#/definitions/Devices'
+      data:
+        min: 3
+        max: 6
+        #submin: 1
+        #submax: 4
+  address:
+    type: object
+    description: An object of the Address
+    schema:
+      $ref: '#/definitions/Address'
+  children:
+    type: array
+    description: "An array of Children objects"
+    items:
+      $ref: '#/definitions/Children'
+      data:
+        min: 0
+        max: 5
+  visited_places:
+    type: array
+    description: "Array of objects with arrays"
+    items:
+      $ref: '#/definitions/Visited_places'
+      data:
+        min: 1
+        max: 4
+
+definitions:
+  Device:
+    type: string
+    description: "string AA-001 with zipf step distribution"
+    data:
+      build: "return chance.weighted(['AA', 'BB', 'CC', 'DD', 'EE', 'FF', 'GG', 'HH', 'II', 'JJ', 'KK', 'LL', 'MM', 'NN', 'OO', 'PP', 'QQ', 'RR', 'SS', 'TT', 'UU', 'VV', 'WW', 'XX', 'YY', 'ZZ'], [1, 0.5, 0.333, 0.25, 0.2, 0.167, 0.143, 0.125, 0.111, 0.1, 0.091, 0.083, 0.077, 0.071, 0.067, 0.063, 0.059, 0.056, 0.053, 0.050, 0.048, 0.045, 0.043, 0.042, 0.04, 0.038]).concat('-').concat(chance.string({length: 3, pool: '0123456789'}));"
+  Devices:
+    type: object
+    properties:
+      arr:
+        type: array
+        items:
+          $ref: '#/definitions/Device'
+          data:
+            min: 1
+            max: 4
+  Address:
+    type: object
+    properties:
+      street:
+        type: string
+        description: The address 1
+        data:
+          build: "return faker.address.streetAddress() + ' ' + faker.address.streetSuffix();"
+      city:
+        type: string
+        description: The locality
+        data:
+          build: "return faker.address.city();"
+      zip:
+        type: string
+        description: The zip code / postal code
+        data:
+          build: "return faker.address.zipCode();"
+      country:
+        type: string
+        description: The country
+        data:
+          build: "return faker.address.country();"
+      prev_address:
+        type: object
+        description: An object of the Address
+        schema:
+          $ref: '#/definitions/Previous_address'
+  Previous_address:
+    type: object
+    properties:
+      street:
+        type: string
+        description: The address 1
+        data:
+          build: "return faker.address.streetAddress() + ' ' + faker.address.streetSuffix();"
+      city:
+        type: string
+        description: The locality
+        data:
+          build: "return faker.address.city();"
+      zip:
+        type: string
+        description: The zip code / postal code
+        data:
+          build: "return faker.address.zipCode();"
+      country:
+        type: string
+        description: The country
+        data:
+          build: "return faker.address.country();"
+      property_current_owner:
+        type: object
+        description: "owner object"
+        schema:
+          $ref: '#/definitions/Property_owner'
+  Children:
+    type: object
+    properties:
+      first_name:
+        type: string
+        description: "first name - string"
+        data:
+          fake: "{{name.firstName}}"
+      gender:
+        type: string
+        description: "gender M or F"
+        data:
+          build: "return chance.bool({likelihood: 50})? faker.random.arrayElement(['M', 'F']) : null;"
+      age:
+        type: integer
+        description: "age - 1 to 17"
+        data:
+          build: "return chance.integer({min: 1, max: 17})"
+  Visited_cities:
+    type: string
+    description: "city"
+    data:
+      build: "return faker.address.city();"
+  Visited_places:
+    type: object
+    properties:
+      country:
+        type: string
+        data:
+          build: "return faker.address.country();"
+      cities:
+        type: array
+        description: "Array of strings - device id"
+        items:
+          $ref: '#/definitions/Visited_cities'
+          data:
+            min: 1
+            max: 5
+  Property_owner:
+    type: object
+    properties:
+      first_name:
+        type: string
+        description: "First name - string, linked to url as the personal page"
+        data:
+          fake: "{{name.firstName}}"
+      middle_name:
+        type: string
+        description: "Middle name - string"
+        data:
+          build: "return chance.bool() ? chance.name({middle: true}).split(' ')[1] : null;"
+      last_name:
+        type: string
+        description: "Last name - string"
+        data:
+          fake: "{{name.lastName}}"
+      phone:
+        type: string
+        description: "phone"
+        data:
+          build: "return chance.phone();"
