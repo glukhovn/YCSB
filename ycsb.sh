@@ -257,6 +257,7 @@ run_workload()
 			-P config/$db.dat 
 			-P config/default.dat
 			"
+	local no_create_table=n
 
 	test "$YCSB_MAXRUNTIME" &&
 	test "$cmd" = "run" &&
@@ -277,6 +278,7 @@ run_workload()
 		*)
 			props="$props -P config/$1.dat"
 			cfg="${cfg}_$1"
+			grep 'no_create_table=true' "${YCSB_HOME}/config/$1.dat" > /dev/null 2>&1 && no_create_table=y
 			;;
 		esac
 		shift
@@ -309,7 +311,8 @@ run_workload()
 	test $? = 0 && sizestat_pid=$!
 
 	{
-		test "$cmd" != "load" || create_table "$db" $props &&
+		test "$cmd" != "load" || test "$no_create_table" == "y" ||
+		create_table "$db" $props &&
 		checkpoint "$db" &&
 		ycsb $cmd "${db%%-*}" $props -threads $clients -s -p exportfile="${out_file}"
 	} > "${log_file}" 2>&1 ||
