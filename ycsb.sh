@@ -253,7 +253,7 @@ run_workload()
 	local name="${db}_${workload}_$clients"	
 	local cfg=""
 	local props="
-			-P workloads/$workload
+			-P workloads/${4%-*}/workload${4##*-}
 			-P config/$db.dat 
 			-P config/default.dat
 			"
