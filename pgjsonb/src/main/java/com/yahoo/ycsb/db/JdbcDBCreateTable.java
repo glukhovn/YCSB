@@ -47,6 +47,7 @@ public class JdbcDBCreateTable implements JdbcDBClientConstants {
     String username = props.getProperty(CONNECTION_USER);
     String password = props.getProperty(CONNECTION_PASSWD, "");
     String url = props.getProperty(CONNECTION_URL);
+    String am = props.getProperty("pg_am", "");
     int fieldcount = Integer.parseInt(props.getProperty(FIELD_COUNT_PROPERTY, 
         FIELD_COUNT_PROPERTY_DEFAULT));
     boolean pk_column = Boolean.parseBoolean(props.getProperty(PK_COLUMN, "false"));
@@ -56,9 +57,11 @@ public class JdbcDBCreateTable implements JdbcDBClientConstants {
     boolean jsonbc = Boolean.parseBoolean(props.getProperty("jsonbc", "false"));
     boolean pglz = Boolean.parseBoolean(props.getProperty("pglz", "true"));
     boolean pathman = Boolean.parseBoolean(props.getProperty("pathman", "false"));
+    boolean unlogged = Boolean.parseBoolean(props.getProperty("unlogged", "false"));
     int partitions = Integer.parseInt(props.getProperty(PARTITION_COUNT_PROPERTY, "0"));
     int fillfactor = Integer.parseInt(props.getProperty("fillfactor", "0"));
 
+    String amopt = am == "" ? "" : " USING " + am;
     String fillfactoropt = fillfactor != 0 ? " WITH (fillfactor=" + fillfactor + ")" : "";
 
     if (driver == null || username == null || url == null) {
@@ -85,7 +88,10 @@ public class JdbcDBCreateTable implements JdbcDBClientConstants {
         sqlJson ? "(JSON_VALUE(data, '$.'" + PRIMARY_KEY + "' RETURNING text))"
                 : "(DATA->>'" + PRIMARY_KEY + "')";
 
-      sql = new StringBuilder("CREATE TABLE ");
+      sql = new StringBuilder("CREATE ");
+      if (unlogged)
+        sql.append("UNLOGGED ");
+      sql.append("TABLE ");
       sql.append(tablename);
       sql.append(" (");
       if (pk_column)
@@ -93,6 +99,7 @@ public class JdbcDBCreateTable implements JdbcDBClientConstants {
       sql.append("DATA jsonb" + (jsonbc ? " COMPRESSED jsonbc" : "") + " NOT NULL)");
       if (partitions > 0 && pk_expr != null && !pathman)
         sql.append(" PARTITION BY HASH (").append(pk_expr).append(")");
+      sql.append(amopt);
       sql.append(fillfactoropt);
       sql.append(";");
 
