@@ -48,6 +48,8 @@ public class JdbcDBCreateTable implements JdbcDBClientConstants {
     String password = props.getProperty(CONNECTION_PASSWD, "");
     String url = props.getProperty(CONNECTION_URL);
     String am = props.getProperty("pg_am", "");
+    String fdw = props.getProperty("pg_fdw", "");
+    String pgtabopt = props.getProperty("pg_table_options", "");
     int fieldcount = Integer.parseInt(props.getProperty(FIELD_COUNT_PROPERTY, 
         FIELD_COUNT_PROPERTY_DEFAULT));
     boolean pk_column = Boolean.parseBoolean(props.getProperty(PK_COLUMN, "false"));
@@ -62,6 +64,7 @@ public class JdbcDBCreateTable implements JdbcDBClientConstants {
     int fillfactor = Integer.parseInt(props.getProperty("fillfactor", "0"));
 
     String amopt = am == "" ? "" : " USING " + am;
+    String fdwopt = fdw == "" ? "" : " SERVER " + fdw;
     String fillfactoropt = fillfactor != 0 ? " WITH (fillfactor=" + fillfactor + ")" : "";
 
     if (driver == null || username == null || url == null) {
@@ -76,7 +79,7 @@ public class JdbcDBCreateTable implements JdbcDBClientConstants {
       conn = DriverManager.getConnection(url, username, password);
       Statement stmt = conn.createStatement();
       
-      StringBuilder sql = new StringBuilder("DROP TABLE IF EXISTS ");
+      StringBuilder sql = new StringBuilder("DROP " + (fdwopt != "" ? "FOREIGN " : "") + "TABLE IF EXISTS ");
       sql.append(tablename);
       sql.append(" CASCADE;");
       
@@ -89,17 +92,21 @@ public class JdbcDBCreateTable implements JdbcDBClientConstants {
                 : "(DATA->>'" + PRIMARY_KEY + "')";
 
       sql = new StringBuilder("CREATE ");
-      if (unlogged)
+      if (fdwopt != "")
+        sql.append("FOREIGN ");
+      else if (unlogged)
         sql.append("UNLOGGED ");
       sql.append("TABLE ");
       sql.append(tablename);
       sql.append(" (");
       if (pk_column)
-        sql.append(PRIMARY_KEY).append(" text").append(partitions > 0 && !pathman ? "": " PRIMARY KEY" + fillfactoropt).append(", ");
+        sql.append(PRIMARY_KEY).append(" text").append(fdwopt != "" || (partitions > 0 && !pathman) ? "" : " PRIMARY KEY" + fillfactoropt).append(", ");
       sql.append("DATA jsonb" + (jsonbc ? " COMPRESSED jsonbc" : "") + " NOT NULL)");
       if (partitions > 0 && pk_expr != null && !pathman)
         sql.append(" PARTITION BY HASH (").append(pk_expr).append(")");
       sql.append(amopt);
+      sql.append(fdwopt);
+      sql.append(pgtabopt);
       sql.append(fillfactoropt);
       sql.append(";");
 
