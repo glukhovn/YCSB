@@ -1,5 +1,5 @@
 db.driver=org.postgresql.Driver
-db.url=jdbc:postgresql://localhost:5432/ycsb
+db.url=jdbc:postgresql://localhost:54321/ycsb
 db.user=ycsb
 db.passwd=ycsb
 db.batchsize=100

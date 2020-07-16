@@ -52,7 +52,7 @@ public class JdbcDBCreateTable implements JdbcDBClientConstants {
     String pgtabopt = props.getProperty("pg_table_options", "");
     int fieldcount = Integer.parseInt(props.getProperty(FIELD_COUNT_PROPERTY, 
         FIELD_COUNT_PROPERTY_DEFAULT));
-    boolean pk_column = Boolean.parseBoolean(props.getProperty(PK_COLUMN, "false"));
+    boolean pk_column = Boolean.parseBoolean(props.getProperty("pk_column" /*PK_COLUMN*/, "false"));
     boolean jsonbPathOps = Boolean.parseBoolean(props.getProperty("jsonb_path_ops", "false"));
     boolean sqlJson = Boolean.parseBoolean(props.getProperty("sql_json", "false"));
     boolean ginFastUpdate = Boolean.parseBoolean(props.getProperty("gin_fast_update", "false"));
@@ -60,7 +60,7 @@ public class JdbcDBCreateTable implements JdbcDBClientConstants {
     boolean pglz = Boolean.parseBoolean(props.getProperty("pglz", "true"));
     boolean pathman = Boolean.parseBoolean(props.getProperty("pathman", "false"));
     boolean unlogged = Boolean.parseBoolean(props.getProperty("unlogged", "false"));
-    int partitions = Integer.parseInt(props.getProperty(PARTITION_COUNT_PROPERTY, "0"));
+    int partitions = Integer.parseInt(props.getProperty("partitions" /*PARTITION_COUNT_PROPERTY*/, "0"));
     int fillfactor = Integer.parseInt(props.getProperty("fillfactor", "0"));
 
     String amopt = am == "" ? "" : " USING " + am;
